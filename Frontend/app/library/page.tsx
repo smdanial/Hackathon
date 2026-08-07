@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { BookOpen } from "lucide-react";
-import ComingSoon from "@/components/ComingSoon";
+import LibraryExplorer from "@/components/library/LibraryExplorer";
 
 export const metadata: Metadata = {
   title: "Library · CampusEase",
 };
 
-export default function LibraryPage() {
-  return (
-    <ComingSoon
-      title="Library"
-      icon={BookOpen}
-      description="Check seat and book availability in the library."
-    />
-  );
+interface LibraryPageProps {
+  searchParams?: Promise<{ tab?: string }>;
+}
+
+export default async function LibraryPage({ searchParams }: LibraryPageProps) {
+  const { tab } = (await searchParams) ?? {};
+  // Read the ?tab= query param on page load (e.g. from the navbar dropdown).
+  // Defaults to the Books tab when absent or unrecognized.
+  const initialTab = tab === "seats" ? "seats" : "books";
+  // Key by tab so client-side navigation between ?tab= values remounts the
+  // explorer and actually switches sections (useState reads initialTab once).
+  return <LibraryExplorer key={initialTab} initialTab={initialTab} />;
 }

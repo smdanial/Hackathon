@@ -44,10 +44,10 @@ const NAV_LINKS: NavLink[] = [
     dropdown: [
       {
         label: "Seat Availability",
-        href: "/library#seat-availability",
+        href: "/library?tab=seats",
         icon: Armchair,
       },
-      { label: "Books", href: "/library#books", icon: BookMarked },
+      { label: "Books", href: "/library?tab=books", icon: BookMarked },
     ],
   },
   {
