@@ -1,17 +1,10 @@
 import type { Metadata } from "next";
-import { Bell } from "lucide-react";
-import ComingSoon from "@/components/ComingSoon";
+import NoticesBoard from "@/components/NoticesBoard";
 
 export const metadata: Metadata = {
   title: "Notices · CampusEase",
 };
 
 export default function NoticesPage() {
-  return (
-    <ComingSoon
-      title="Notices"
-      icon={Bell}
-      description="Your personalized class, lab, and club updates."
-    />
-  );
+  return <NoticesBoard />;
 }

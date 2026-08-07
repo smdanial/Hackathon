@@ -12,14 +12,22 @@ import {
   ChevronDown,
   CircleUserRound,
   DoorOpen,
+  ClipboardList,
+  FlaskConical,
   GraduationCap,
   Home,
   Menu,
   PackageSearch,
+  Palette,
   Route,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import NoticeModal from "@/components/NoticeModal";
+import {
+  NOTICE_CATEGORY_LABELS,
+  type NoticeCategory,
+} from "@/lib/mockNotices";
 
 interface DropdownItem {
   label: string;
@@ -64,11 +72,23 @@ const NAV_LINKS: NavLink[] = [
   { label: "Notices", href: "/notices", icon: Bell },
 ];
 
+// Notices has no page anchors to link to: its submenu items open the shared
+// NoticeModal pre-filtered to a segment instead of navigating. Labels come
+// from NOTICE_CATEGORY_LABELS so the two stay in sync.
+const NOTICES_SUBMENU: { icon: LucideIcon; category: NoticeCategory }[] = [
+  { icon: GraduationCap, category: "class" },
+  { icon: Palette, category: "club" },
+  { icon: FlaskConical, category: "lab" },
+  { icon: ClipboardList, category: "ems" },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   // Keyed by the parent item's href; null means nothing is open.
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  // Segment of the NoticeModal opened from the Notices submenu; null = closed.
+  const [modalCategory, setModalCategory] = useState<NoticeCategory | null>(null);
   const [prevPathname, setPrevPathname] = useState(pathname);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -81,6 +101,7 @@ export default function Navbar() {
     setPrevPathname(pathname);
     setMenuOpen(false);
     setOpenDropdown(null);
+    setModalCategory(null);
   }
 
   // Close on Escape and lock body scroll while the mobile menu is open
@@ -152,6 +173,63 @@ export default function Navbar() {
                   ? "bg-primary text-ink"
                   : "text-slate-700 hover:bg-slate-100 hover:text-ink"
               }`;
+
+              if (label === "Notices") {
+                // Split label: the label navigates to /notices, the chevron
+                // toggles the panel (same open/close state as the dropdowns).
+                return (
+                  <div key={href} className="relative">
+                    <div
+                      className={`flex items-center rounded-full transition-colors duration-200 ${
+                        active
+                          ? "bg-primary text-ink"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Link
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        className="flex items-center gap-2 rounded-l-full py-2 pl-3.5 pr-1.5 text-sm font-medium transition-colors duration-200 hover:text-ink"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setOpenDropdown(isOpen ? null : href)}
+                        aria-haspopup="true"
+                        aria-expanded={isOpen}
+                        aria-label="Toggle Notices submenu"
+                        className="flex items-center rounded-r-full py-2 pl-1 pr-3.5 text-sm font-medium transition-colors duration-200 hover:text-ink"
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform duration-200 ${
+                            isOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    {isOpen ? (
+                      <div className="absolute left-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl bg-white p-1.5 shadow-soft">
+                        {NOTICES_SUBMENU.map(({ category, icon: SubIcon }) => (
+                          <button
+                            key={category}
+                            type="button"
+                            onClick={() => {
+                              setOpenDropdown(null);
+                              setModalCategory(category);
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-accent-light hover:text-ink"
+                          >
+                            <SubIcon className="h-4 w-4 shrink-0 text-primary-dark" />
+                            {NOTICE_CATEGORY_LABELS[category]}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
 
               if (dropdown) {
                 // Dropdown items are a single button: tapping the label OR the
@@ -276,6 +354,64 @@ export default function Navbar() {
                     : "text-slate-700 hover:bg-slate-100 hover:text-ink"
                 }`;
 
+                if (label === "Notices") {
+                  // Same split as desktop: label navigates, chevron toggles.
+                  return (
+                    <div key={href}>
+                      <div
+                        className={`flex items-center rounded-xl transition-colors duration-200 ${
+                          active
+                            ? "bg-primary text-ink"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <Link
+                          href={href}
+                          onClick={() => setMenuOpen(false)}
+                          aria-current={active ? "page" : undefined}
+                          className="flex flex-1 items-center gap-3 rounded-l-xl px-4 py-3 text-sm font-medium transition-colors duration-200 hover:text-ink"
+                        >
+                          <Icon className="h-5 w-5 shrink-0" />
+                          {label}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setOpenDropdown(isOpen ? null : href)}
+                          aria-haspopup="true"
+                          aria-expanded={isOpen}
+                          aria-label="Toggle Notices submenu"
+                          className="flex w-11 shrink-0 items-center justify-center rounded-r-xl transition-colors duration-200 hover:text-ink"
+                        >
+                          <ChevronDown
+                            className={`h-5 w-5 transition-transform duration-200 ${
+                              isOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {isOpen ? (
+                        <div className="ml-3 mt-1.5 flex flex-col gap-1 border-l-2 border-primary/40 pl-3">
+                          {NOTICES_SUBMENU.map(({ category, icon: SubIcon }) => (
+                            <button
+                              key={category}
+                              type="button"
+                              onClick={() => {
+                                setMenuOpen(false);
+                                setOpenDropdown(null);
+                                setModalCategory(category);
+                              }}
+                              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-accent-light hover:text-ink"
+                            >
+                              <SubIcon className="h-4 w-4 shrink-0 text-primary-dark" />
+                              {NOTICE_CATEGORY_LABELS[category]}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                }
+
                 if (dropdown) {
                   return (
                     <div key={href}>
@@ -334,6 +470,14 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* NoticeModal opened from the Notices submenu */}
+      {modalCategory ? (
+        <NoticeModal
+          category={modalCategory}
+          onClose={() => setModalCategory(null)}
+        />
+      ) : null}
     </>
   );
 }
