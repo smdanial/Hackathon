@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---- Brand palette (CampusEase) ---- */
+  /* Main "pop" accent — active links, primary buttons */
+  --color-primary: #b3b0f8;
+  --color-primary-dark: #4f46e5; /* deeper indigo for gradients/hovers */
+  --color-primary-light: #e9c3f1; /* small accents: icon bgs, badges, dropdown hover */
+
+  --color-accent-dark: #7c3aed; /* readable on lavender */
+  --color-accent-light: #e9c3f1; /* light lavender accents */
+
+  /* ---- Backgrounds (soft purple-blue family) ---- */
+  --color-surface: #eaeaf5; /* page background */
+  --color-navbar: #e1dcf9; /* navbar background */
+  --color-card: #d3cbf9; /* card background */
+  --color-ink: #1e293b; /* dark slate (slate-800) */
+
+  /* ---- Status colors (reserved for later features) ---- */
+  --color-success: #22c55e;
+  --color-success-light: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+
+  /* ---- Typography ---- */
+  --font-heading: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* ---- Soft shadows (instead of hard borders) ---- */
+  --shadow-card: 0 2px 10px -2px rgb(15 23 42 / 0.07);
+  --shadow-soft: 0 6px 24px -8px rgb(15 23 42 / 0.12);
+  --shadow-lift: 0 18px 44px -12px rgb(79 70 229 / 0.22);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+}
