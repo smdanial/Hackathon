@@ -1,0 +1,132 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import {
+  ClipboardList,
+  FlaskConical,
+  GraduationCap,
+  Palette,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  NOTICE_CATEGORY_LABELS,
+  formatNoticeTimestamp,
+  getNoticesByCategory,
+} from "@/lib/mockNotices";
+import type { NoticeCategory } from "@/lib/mockNotices";
+
+/** Icon shown in the modal header for each segment. */
+const CATEGORY_ICONS: Record<NoticeCategory, LucideIcon> = {
+  class: GraduationCap,
+  club: Palette,
+  lab: FlaskConical,
+  ems: ClipboardList,
+};
+
+interface NoticeModalProps {
+  /** The segment whose notices this modal shows. */
+  category: NoticeCategory;
+  onClose: () => void;
+}
+
+/**
+ * Shared modal listing every notice for one segment (class / club / lab / EMS),
+ * newest first, with full posted timestamps. Used by both the navbar dropdown
+ * and the Notices page.
+ */
+export default function NoticeModal({ category, onClose }: NoticeModalProps) {
+  const notices = getNoticesByCategory(category);
+  const Icon = CATEGORY_ICONS[category];
+
+  // Keep the latest onClose without re-adding the listeners on every render.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Close on Escape and scroll-lock the page body while the modal is open.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCloseRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={NOTICE_CATEGORY_LABELS[category]}
+    >
+      {/* Backdrop — clicking it closes the modal */}
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-card shadow-lift">
+        <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-heading text-lg font-bold leading-tight text-ink">
+                {NOTICE_CATEGORY_LABELS[category]}
+              </h2>
+              <p className="text-xs font-medium text-slate-600">
+                {notices.length} {notices.length === 1 ? "notice" : "notices"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-600 transition-colors duration-200 hover:bg-white/70 hover:text-ink"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3 overflow-y-auto p-4">
+          {notices.length === 0 ? (
+            <p className="rounded-xl bg-white/60 px-4 py-8 text-center text-sm font-medium text-slate-600">
+              No notices in this segment yet.
+            </p>
+          ) : (
+            notices.map((notice) => (
+              <article
+                key={notice.id}
+                className="rounded-xl bg-white/70 p-4 shadow-card transition-colors duration-200 hover:bg-white/90"
+              >
+                <h3 className="font-heading text-base font-semibold text-ink">
+                  {notice.title}
+                </h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
+                  {notice.body}
+                </p>
+                <time
+                  dateTime={notice.postedAt}
+                  className="mt-3 block text-xs font-medium text-slate-500"
+                >
+                  {formatNoticeTimestamp(notice.postedAt)}
+                </time>
+              </article>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
