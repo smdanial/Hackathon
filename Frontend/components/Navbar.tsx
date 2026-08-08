@@ -63,9 +63,9 @@ const NAV_LINKS: NavLink[] = [
     href: "/bus",
     icon: Bus,
     dropdown: [
-      { label: "Farmgate to NITER", href: "/bus#farmgate-to-niter", icon: Route },
-      { label: "Gabtoli to NITER", href: "/bus#gabtoli-to-niter", icon: Route },
-      { label: "Uttara to NITER", href: "/bus#uttara-to-niter", icon: Route },
+      { label: "Farmgate to NITER", href: "/bus?route=farmgate", icon: Route },
+      { label: "Gabtoli to NITER", href: "/bus?route=gabtoli", icon: Route },
+      { label: "Uttara to NITER", href: "/bus?route=uttara", icon: Route },
     ],
   },
   { label: "Lost & Found", href: "/lost-found", icon: PackageSearch },
