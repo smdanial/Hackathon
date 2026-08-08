@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
-import { Bus } from "lucide-react";
-import ComingSoon from "@/components/ComingSoon";
+import BusTracker from "@/components/BusTracker";
+import { getBusRoute } from "@/lib/mockBusRoutes";
 
 export const metadata: Metadata = {
   title: "Bus Tracker · CampusEase",
 };
 
-export default function BusPage() {
-  return (
-    <ComingSoon
-      title="Bus Tracker"
-      icon={Bus}
-      description="Live location for all three campus bus routes."
-    />
-  );
+interface BusPageProps {
+  searchParams?: Promise<{ route?: string }>;
+}
+
+export default async function BusPage({ searchParams }: BusPageProps) {
+  const { route } = (await searchParams) ?? {};
+  // Read the ?route= query param on page load (e.g. from the navbar dropdown).
+  // Falls back to the Farmgate route when absent or unrecognized.
+  const initialRoute = getBusRoute(route);
+  // Key by route id so client-side navigation between ?route= values remounts
+  // the tracker and actually switches maps (useState reads initialRoute once).
+  return <BusTracker key={initialRoute.id} initialRoute={initialRoute} />;
 }
