@@ -17,9 +17,11 @@ import {
   GraduationCap,
   Home,
   Menu,
+  PackagePlus,
   PackageSearch,
   Palette,
   Route,
+  Search,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -68,7 +70,15 @@ const NAV_LINKS: NavLink[] = [
       { label: "Uttara to NITER", href: "/bus#uttara-to-niter", icon: Route },
     ],
   },
-  { label: "Lost & Found", href: "/lost-found", icon: PackageSearch },
+  {
+    label: "Lost & Found",
+    href: "/lost-found",
+    icon: PackageSearch,
+    dropdown: [
+      { label: "Lost", href: "/lost-found?tab=lost", icon: Search },
+      { label: "Found", href: "/lost-found?tab=found", icon: PackagePlus },
+    ],
+  },
   { label: "Notices", href: "/notices", icon: Bell },
 ];
 
@@ -289,9 +299,14 @@ export default function Navbar() {
           {/* Right side: profile icon + mobile hamburger */}
           <div className="flex items-center gap-1.5">
             <Link
-              href="/login"
-              aria-label="Log in"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-primary"
+              href="/profile"
+              aria-label="My profile"
+              aria-current={pathname === "/profile" ? "page" : undefined}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-200 ${
+                pathname === "/profile"
+                  ? "bg-primary text-ink"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-primary"
+              }`}
             >
               <CircleUserRound className="h-5 w-5" />
             </Link>
