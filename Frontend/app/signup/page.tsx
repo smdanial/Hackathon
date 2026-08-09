@@ -1,18 +1,61 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { IdCard, Mail, Phone, UserRound } from "lucide-react";
 import AuthShell from "@/components/AuthShell";
 import { PasswordField, PRIMARY_BTN, TextField } from "@/components/AuthField";
+import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
+import { setSession, type AuthResponse } from "@/lib/auth";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [studentId, setStudentId] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const data = await apiRequest<AuthResponse>("/auth/signup/", {
+        method: "POST",
+        body: JSON.stringify({
+          full_name: fullName,
+          email,
+          student_id: studentId,
+          phone,
+          password,
+          confirm_password: confirmPassword,
+        }),
+      });
+      setSession(data.student, data.token, false);
+      router.push("/");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? firstErrorMessage(err.body)
+          : "Unable to reach the server. Is the backend running?"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <AuthShell
@@ -30,7 +73,7 @@ export default function SignupPage() {
         </>
       }
     >
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <TextField
           label="Full Name"
           id="signup-name"
@@ -80,7 +123,7 @@ export default function SignupPage() {
           id="signup-password"
           value={password}
           onChange={setPassword}
-          placeholder="Create a password"
+          placeholder="Create a password (min. 8 characters)"
           autoComplete="new-password"
         />
         <PasswordField
@@ -92,8 +135,17 @@ export default function SignupPage() {
           autoComplete="new-password"
         />
 
-        <button type="submit" className={PRIMARY_BTN}>
-          Create Account
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <button type="submit" disabled={submitting} className={PRIMARY_BTN}>
+          {submitting ? "Creating account…" : "Create Account"}
         </button>
       </form>
     </AuthShell>

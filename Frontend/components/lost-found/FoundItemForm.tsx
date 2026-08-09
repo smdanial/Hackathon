@@ -4,17 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
   ImagePlus,
+  Loader2,
   MapPin,
   PackagePlus,
   Phone,
   User,
   X,
 } from "lucide-react";
+import { ApiError, firstErrorMessage } from "@/lib/api";
 import { CATEGORIES, type ItemCategory, type NewFoundItem } from "./dummyData";
 
 interface FoundItemFormProps {
-  /** Called with the filled-in entry so the explorer can add it to the list. */
-  onPost: (entry: NewFoundItem) => void;
+  /** Uploads the entry to the API; resolves on success, rejects on failure. */
+  onPost: (entry: NewFoundItem) => Promise<void>;
 }
 
 const inputClass =
@@ -23,9 +25,9 @@ const inputClass =
 const labelClass = "text-sm font-semibold text-slate-700";
 
 /**
- * Found tab: report something you found. Fully client-side — the photo
- * becomes a local blob URL for a live preview, and the entry is handed to
- * the parent's in-memory list (no persistence across reloads).
+ * Found tab: report something you found. The photo is picked locally for a
+ * live blob preview, then uploaded to the Django API as multipart/form-data
+ * on submit, so reports persist in the database.
  */
 export default function FoundItemForm({ onPost }: FoundItemFormProps) {
   const [itemName, setItemName] = useState("");
@@ -34,14 +36,17 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
   const [locationFound, setLocationFound] = useState("");
   const [finderName, setFinderName] = useState("");
   const [finderPhone, setFinderPhone] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [justPosted, setJustPosted] = useState(false);
 
   const objectUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hideTimerRef = useRef<number | null>(null);
 
-  // Revoke the blob URL and clear the pending success timer on unmount.
+  // Revoke the preview blob URL and clear the pending success timer on unmount.
   useEffect(() => {
     return () => {
       if (objectUrlRef.current) {
@@ -60,9 +65,8 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
     }
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
-    setPreviewUrl(url);
+    setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const clearImage = () => {
@@ -70,6 +74,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
+    setImageFile(null);
     setPreviewUrl(null);
     // Reset the input so picking the same file again re-triggers onChange.
     if (fileInputRef.current) {
@@ -87,29 +92,38 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
     clearImage();
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) return;
 
-    // Ownership of the blob URL moves to the parent (it's now rendered by
-    // the Lost tab cards), so clear the ref BEFORE reset so clearImage() and
-    // this form's unmount cleanup don't revoke it out from under the cards.
-    objectUrlRef.current = null;
-    onPost({
-      itemName: itemName.trim(),
-      category,
-      description: description.trim(),
-      locationFound: locationFound.trim(),
-      imageUrl: previewUrl ?? "",
-      finderName: finderName.trim(),
-      finderPhone: finderPhone.trim(),
-    });
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onPost({
+        itemName: itemName.trim(),
+        category,
+        description: description.trim(),
+        locationFound: locationFound.trim(),
+        finderName: finderName.trim(),
+        finderPhone: finderPhone.trim(),
+        image: imageFile,
+      });
 
-    resetForm();
-    setJustPosted(true);
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
+      resetForm();
+      setJustPosted(true);
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+      }
+      hideTimerRef.current = window.setTimeout(() => setJustPosted(false), 4000);
+    } catch (err) {
+      setSubmitError(
+        err instanceof ApiError
+          ? firstErrorMessage(err.body)
+          : "Could not post the item. Is the backend running?"
+      );
+    } finally {
+      setSubmitting(false);
     }
-    hideTimerRef.current = window.setTimeout(() => setJustPosted(false), 4000);
   };
 
   return (
@@ -125,6 +139,17 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
             <p className="text-sm font-semibold text-success">
               Item posted! It now shows up in the Lost tab.
             </p>
+          </div>
+        ) : null}
+
+        {/* Submission error */}
+        {submitError ? (
+          <div
+            role="alert"
+            className="flex items-center gap-3 border-b border-rose-200 bg-rose-50 px-5 py-4 sm:px-6"
+          >
+            <X className="h-5 w-5 shrink-0 text-rose-500" />
+            <p className="text-sm font-semibold text-rose-700">{submitError}</p>
           </div>
         ) : null}
 
@@ -156,6 +181,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                 onChange={(e) => setItemName(e.target.value)}
                 placeholder="e.g. Water bottle, keys"
                 required
+                disabled={submitting}
                 className={inputClass}
               />
             </div>
@@ -167,6 +193,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                 id="item-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ItemCategory)}
+                disabled={submitting}
                 className={inputClass}
               >
                 {CATEGORIES.map((option) => (
@@ -190,6 +217,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
               placeholder="Describe the item so its owner can recognize it…"
               rows={3}
               required
+              disabled={submitting}
               className={`${inputClass} resize-none`}
             />
           </div>
@@ -208,6 +236,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                 onChange={(e) => setLocationFound(e.target.value)}
                 placeholder="e.g. Library, Canteen"
                 required
+                disabled={submitting}
                 className={`${inputClass} pl-11`}
               />
             </div>
@@ -228,6 +257,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                   onChange={(e) => setFinderName(e.target.value)}
                   placeholder="e.g. Lubna Rahman"
                   required
+                  disabled={submitting}
                   className={`${inputClass} pl-11`}
                 />
               </div>
@@ -246,7 +276,8 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                   onChange={(e) => setFinderPhone(e.target.value)}
                   placeholder="e.g. 01XXX-XXXXXX"
                   required
-                  pattern="[0-9+ -]{7,}"
+                  disabled={submitting}
+                  pattern="[0-9+ \\-]{7,}"
                   title="Please enter a valid phone number"
                   className={`${inputClass} pl-11`}
                 />
@@ -268,6 +299,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
                 <button
                   type="button"
                   onClick={clearImage}
+                  disabled={submitting}
                   aria-label="Remove selected photo"
                   className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/60 text-white shadow-sm backdrop-blur-sm transition-colors duration-200 hover:bg-slate-900/80"
                 >
@@ -294,6 +326,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
               type="file"
               accept="image/*"
               onChange={handleImageChange}
+              disabled={submitting}
               className="sr-only"
             />
           </div>
@@ -301,10 +334,20 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
           {/* Submit */}
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98] sm:text-base"
+            disabled={submitting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-primary disabled:hover:text-ink sm:text-base"
           >
-            <PackagePlus className="h-4 w-4 sm:h-5 sm:w-5" />
-            Post Found Item
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin sm:h-5 sm:w-5" />
+                Posting…
+              </>
+            ) : (
+              <>
+                <PackagePlus className="h-4 w-4 sm:h-5 sm:w-5" />
+                Post Found Item
+              </>
+            )}
           </button>
         </form>
       </div>
