@@ -151,8 +151,8 @@ export default function Navbar() {
   }, [openDropdown, menuOpen]);
 
   // Auth pages are standalone: hide the navbar entirely, so the logo inside
-  // the login/signup card is the only way back to the homepage.
-  if (pathname === "/login" || pathname === "/signup") {
+  // the login/signup/reset card is the only way back to the homepage.
+  if (pathname === "/login" || pathname === "/signup" || pathname === "/reset-password") {
     return null;
   }
 

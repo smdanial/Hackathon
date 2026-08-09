@@ -6,21 +6,58 @@ import {
   ChevronDown,
   DoorOpen,
   Layers,
+  Loader2,
   Radio,
   RefreshCw,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import RoomModal from "@/components/RoomModal";
-import { ROOMS, getRoomLabel } from "@/lib/mockRooms";
+import { getRoomLabel } from "@/lib/mockRooms";
 import type { Room } from "@/lib/mockRooms";
 import { formatTime, getRoomStatus } from "@/lib/getRoomStatus";
 import type { RoomStatus } from "@/lib/getRoomStatus";
+import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 
 /** How often room statuses are re-derived (ms). */
 const STATUS_REFRESH_INTERVAL_MS = 30_000;
 
 const ALL = "all";
+
+/** Room shape as served by the Django API (snake_case). */
+interface ApiScheduleEntry {
+  id: number;
+  start_time: string;
+  end_time: string;
+  class_name: string;
+  teacher_name: string;
+}
+
+interface ApiRoom {
+  id: number;
+  building: string;
+  floor: number;
+  room_number: string;
+  capacity: number;
+  schedule: ApiScheduleEntry[];
+}
+
+/** Maps an API room to the frontend Room shape used by the status helpers. */
+function toRoom(api: ApiRoom): Room {
+  return {
+    id: String(api.id),
+    building: api.building,
+    floor: api.floor,
+    roomNumber: api.room_number,
+    capacity: api.capacity,
+    schedule: api.schedule.map((s) => ({
+      startTime: s.start_time,
+      endTime: s.end_time,
+      className: s.class_name,
+      teacherName: s.teacher_name,
+    })),
+  };
+}
 
 interface FilterOption {
   value: string;
@@ -148,6 +185,10 @@ export default function RoomFinder() {
   const [building, setBuilding] = useState(ALL);
   const [floor, setFloor] = useState(ALL);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  // Rooms come from the Django API; statuses are derived client-side.
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Re-derive statuses on a timer so the grid updates itself over time.
   useEffect(() => {
@@ -155,25 +196,49 @@ export default function RoomFinder() {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch rooms once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest<ApiRoom[]>("/rooms/")
+      .then((data) => {
+        if (!cancelled) setRooms(data.map(toRoom));
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(
+            err instanceof ApiError
+              ? firstErrorMessage(err.body)
+              : "Could not load rooms. Is the backend running?"
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const buildings = useMemo(
-    () => [...new Set(ROOMS.map((room) => room.building))].sort(),
-    []
+    () => [...new Set(rooms.map((room) => room.building))].sort(),
+    [rooms]
   );
   // Floors follow the selected building; with "All buildings" they span campus.
   const floors = useMemo(() => {
     const candidates =
-      building === ALL ? ROOMS : ROOMS.filter((room) => room.building === building);
+      building === ALL ? rooms : rooms.filter((room) => room.building === building);
     return [...new Set(candidates.map((room) => room.floor))].sort((a, b) => a - b);
-  }, [building]);
+  }, [building, rooms]);
 
   const visibleRooms = useMemo(
     () =>
-      ROOMS.filter(
+      rooms.filter(
         (room) =>
           (building === ALL || room.building === building) &&
           (floor === ALL || room.floor === Number(floor))
       ),
-    [building, floor]
+    [building, floor, rooms]
   );
 
   // Switching building may make the chosen floor invalid — reset to "All floors".
@@ -181,6 +246,31 @@ export default function RoomFinder() {
     setBuilding(value);
     setFloor(ALL);
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-500">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-dark" />
+        <p className="text-sm font-medium">Loading rooms…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-xl rounded-3xl border border-rose-200 bg-rose-50 px-6 py-10 text-center">
+        <DoorOpen className="mx-auto h-8 w-8 text-rose-400" />
+        <p className="mt-2 text-sm font-medium text-rose-700">{error}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-primary-dark"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

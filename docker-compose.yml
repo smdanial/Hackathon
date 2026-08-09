@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./Backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./Backend:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./Frontend
+    command: npm run dev -- -H 0.0.0.0 -p 3000
+    volumes:
+      - ./Frontend:/app
+      # Keep Linux-built node_modules from the image instead of the host's
+      # (Windows) copy, which could contain incompatible native binaries.
+      - frontend_node_modules:/app/node_modules
+      # Keep .next out of the Windows bind mount: Turbopack's writes corrupt
+      # on the shared filesystem, and the cache format differs between OSes.
+      - frontend_next:/app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  frontend_node_modules:
+  frontend_next:
