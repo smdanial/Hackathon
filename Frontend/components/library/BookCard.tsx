@@ -26,7 +26,7 @@ export default function BookCard({ book }: BookCardProps) {
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift">
+    <article className="group flex flex-col overflow-hidden rounded-2xl glass shadow-card ring-1 ring-white/60 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift">
       {/* Cover */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-primary-light">
         {coverFailed ? (
@@ -89,7 +89,7 @@ export default function BookCard({ book }: BookCardProps) {
             <button
               type="button"
               onClick={openPdf}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98]"
             >
               <FileText className="h-4 w-4" />
               Read PDF
@@ -103,7 +103,7 @@ export default function BookCard({ book }: BookCardProps) {
               className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
                 reserved
                   ? "cursor-default bg-success-light text-success"
-                  : "bg-primary text-ink shadow-soft hover:bg-primary-dark hover:text-white hover:shadow-lift"
+                  : "bg-primary text-white shadow-soft hover:bg-primary-dark hover:text-white hover:shadow-lift"
               }`}
             >
               {reserved ? (

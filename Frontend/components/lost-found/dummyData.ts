@@ -25,6 +25,9 @@ export interface FoundItem {
   finderPhone: string;
   /** e.g. "6 Aug 2026" */
   datePosted: string;
+  /** The student who reported this item — only they can mark it received. */
+  reportedById: number | null;
+  isReceived: boolean;
 }
 
 /**

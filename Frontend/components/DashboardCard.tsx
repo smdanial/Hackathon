@@ -36,7 +36,7 @@ export default function DashboardCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-4 rounded-2xl bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col gap-4 rounded-2xl glass p-6 shadow-card ring-1 ring-white/60 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between">
         <div

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DoorOpen, Loader2, PackagePlus, PackageSearch, Search } from "lucide-react";
 import { ApiError, apiRequest, firstErrorMessage } from "@/lib/api";
-import { authHeaders } from "@/lib/auth";
+import { authHeaders, clearSession, getToken, type Student } from "@/lib/auth";
 import FoundItemForm from "./FoundItemForm";
 import LostItemsSection from "./LostItemsSection";
 import type { FoundItem, ItemCategory, NewFoundItem } from "./dummyData";
@@ -22,6 +22,8 @@ interface ApiFoundItem {
   finder_name: string;
   finder_phone: string;
   date_posted: string;
+  reported_by: number | null;
+  is_received: boolean;
 }
 
 /** Maps an API post to the frontend FoundItem shape (camelCase). */
@@ -40,6 +42,8 @@ function toFoundItem(api: ApiFoundItem): FoundItem {
       month: "short",
       year: "numeric",
     }),
+    reportedById: api.reported_by,
+    isReceived: api.is_received,
   };
 }
 
@@ -58,16 +62,38 @@ export default function LostFoundExplorer() {
   const [items, setItems] = useState<FoundItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // The signed-in student's id — drives the owner-only "Received" button.
+  const [currentStudentId, setCurrentStudentId] = useState<number | null>(null);
 
-  // Fetch reported items once on mount.
+  // Lost & Found requires sign-in: redirect to /login without a session,
+  // then load the current student and the found items together.
   useEffect(() => {
+    if (!getToken()) {
+      router.replace("/login");
+      return;
+    }
     let cancelled = false;
-    apiRequest<ApiFoundItem[]>("/lost-found/")
+    apiRequest<Student>("/auth/me/", { headers: authHeaders() })
+      .then((me) => {
+        if (!cancelled) setCurrentStudentId(me.id);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled && err instanceof ApiError && err.status === 401) {
+          clearSession();
+          router.replace("/login");
+        }
+      });
+    apiRequest<ApiFoundItem[]>("/lost-found/", { headers: authHeaders() })
       .then((data) => {
         if (!cancelled) setItems(data.map(toFoundItem));
       })
       .catch((err: unknown) => {
         if (!cancelled) {
+          if (err instanceof ApiError && err.status === 401) {
+            clearSession();
+            router.replace("/login");
+            return;
+          }
           setError(
             err instanceof ApiError
               ? firstErrorMessage(err.body)
@@ -81,6 +107,17 @@ export default function LostFoundExplorer() {
     return () => {
       cancelled = true;
     };
+  }, [router]);
+
+  /** Marks one of my posts as received (owner-only endpoint). */
+  const markReceived = useCallback(async (id: number) => {
+    const updated = await apiRequest<ApiFoundItem>(`/lost-found/${id}/received/`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    setItems((current) =>
+      current.map((item) => (item.id === id ? toFoundItem(updated) : item))
+    );
   }, []);
 
   // Reads ?tab= on load and after every navigation (defaults to "lost").
@@ -113,7 +150,7 @@ export default function LostFoundExplorer() {
   const pill = (active: boolean) =>
     `flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
       active
-        ? "bg-primary text-ink shadow-soft"
+        ? "bg-primary text-white shadow-soft"
         : "text-slate-600 hover:bg-white/70 hover:text-ink"
     }`;
 
@@ -139,7 +176,7 @@ export default function LostFoundExplorer() {
         <div
           role="tablist"
           aria-label="Lost & Found sections"
-          className="flex w-fit items-center gap-1 rounded-full bg-card p-1.5 shadow-card"
+          className="flex w-fit items-center gap-1 rounded-full glass p-1.5 shadow-card"
         >
           <button
             type="button"
@@ -183,7 +220,11 @@ export default function LostFoundExplorer() {
             </button>
           </div>
         ) : (
-          <LostItemsSection items={items} />
+          <LostItemsSection
+            items={items}
+            currentStudentId={currentStudentId}
+            onMarkReceived={markReceived}
+          />
         )
       ) : (
         <FoundItemForm onPost={postItem} />

@@ -14,7 +14,7 @@ function ExplorerFallback() {
       <div className="flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl bg-primary-light text-primary-dark shadow-card">
         <PackageSearch className="h-7 w-7" />
       </div>
-      <div className="h-10 w-48 animate-pulse rounded-full bg-card shadow-card" />
+      <div className="h-10 w-48 animate-pulse rounded-full glass shadow-card" />
     </div>
   );
 }

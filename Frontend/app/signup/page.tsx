@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { IdCard, Mail, Phone, UserRound } from "lucide-react";
+import { ChevronDown, IdCard, Mail, Phone, School, UserRound } from "lucide-react";
 import AuthShell from "@/components/AuthShell";
 import { PasswordField, PRIMARY_BTN, TextField } from "@/components/AuthField";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { setSession, type AuthResponse } from "@/lib/auth";
+import { DEPARTMENTS } from "@/lib/departments";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [studentId, setStudentId] = useState("");
   const [phone, setPhone] = useState("");
+  const [department, setDepartment] = useState("CSE");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +41,13 @@ export default function SignupPage() {
           email,
           student_id: studentId,
           phone,
+          department,
           password,
           confirm_password: confirmPassword,
         }),
       });
       setSession(data.student, data.token, false);
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setError(
@@ -66,7 +69,7 @@ export default function SignupPage() {
           <span className="text-slate-600">Already have an account? </span>
           <Link
             href="/login"
-            className="font-semibold text-[#8A3FA0] transition-colors duration-200 hover:text-[#6E2F85] hover:underline"
+            className="font-semibold text-ink transition-colors duration-200 hover:text-zinc-600 hover:underline"
           >
             Log in
           </Link>
@@ -118,6 +121,29 @@ export default function SignupPage() {
           autoComplete="tel"
           required
         />
+
+        <div>
+          <label htmlFor="signup-department" className="mb-1.5 block text-sm font-medium text-slate-700">
+            Department
+          </label>
+          <div className="relative">
+            <School className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <select
+              id="signup-department"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              required
+              className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pr-11 pl-11 text-sm text-ink shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/15"
+            >
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          </div>
+        </div>
         <PasswordField
           label="Password"
           id="signup-password"

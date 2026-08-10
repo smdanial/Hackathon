@@ -12,7 +12,7 @@ import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { setSession, type AuthResponse } from "@/lib/auth";
 
 const SECONDARY_BTN =
-  "flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-[#4B3F94]/40 hover:bg-[#4B3F94]/5 active:scale-[0.98]";
+  "flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/70 py-2.5 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.98]";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function LoginPage() {
         body: JSON.stringify({ identifier, password }),
       });
       setSession(data.student, data.token, remember);
-      router.push("/");
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setError(
@@ -54,7 +54,7 @@ export default function LoginPage() {
           <span className="text-slate-600">New student? </span>
           <Link
             href="/signup"
-            className="font-semibold text-[#8A3FA0] transition-colors duration-200 hover:text-[#6E2F85] hover:underline"
+            className="font-semibold text-ink transition-colors duration-200 hover:text-zinc-600 hover:underline"
           >
             Create your account
           </Link>
@@ -88,13 +88,13 @@ export default function LoginPage() {
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 accent-[#4B3F94]"
+              className="h-4 w-4 rounded border-slate-300 accent-primary"
             />
             Remember me
           </label>
           <Link
             href="/reset-password"
-            className="text-sm font-medium text-[#8A3FA0] transition-colors duration-200 hover:text-[#6E2F85] hover:underline"
+            className="text-sm font-medium text-ink transition-colors duration-200 hover:text-zinc-600 hover:underline"
           >
             Forgot password?
           </Link>
@@ -124,7 +124,7 @@ export default function LoginPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <button type="button" className={SECONDARY_BTN}>
-          <KeyRound className="h-4 w-4 text-[#4B3F94]" />
+          <KeyRound className="h-4 w-4 text-primary-dark" />
           Niter EMS ID
         </button>
         <button type="button" className={SECONDARY_BTN}>

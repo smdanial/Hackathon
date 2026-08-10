@@ -1,6 +1,10 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+# Canonical department codes — used by signup, the profile, room bookings
+# and department-scoped notices.
+DEPARTMENTS = ["CSE", "EEE", "TE", "IPE", "FDAE"]
+
 
 class Student(AbstractUser):
     """A CampusEase student account.
@@ -19,6 +23,14 @@ class Student(AbstractUser):
     bio = models.TextField(blank=True)
     profile_picture = models.ImageField(
         upload_to="profile_pictures/", blank=True, null=True
+    )
+    is_cr = models.BooleanField(
+        "Class Representative (CR)",
+        default=False,
+        help_text=(
+            "CRs can book rooms and post/update class and lab notices. "
+            "Granted by an admin from the admin panel."
+        ),
     )
 
     USERNAME_FIELD = "email"

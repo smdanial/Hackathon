@@ -8,11 +8,22 @@ from .models import Student
 class StudentAdmin(UserAdmin):
     model = Student
     ordering = ["email"]
-    list_display = ["full_name", "email", "student_id", "phone", "is_active"]
+    list_display = [
+        "full_name",
+        "email",
+        "student_id",
+        "phone",
+        "is_cr",
+        "is_active",
+    ]
+    # Grant/revoke the CR role straight from the student list view.
+    list_editable = ["is_cr"]
+    list_filter = ["is_cr", "is_active", "department"]
     search_fields = ["full_name", "email", "student_id"]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("full_name", "student_id", "phone")}),
+        ("Personal info", {"fields": ("full_name", "student_id", "phone", "department", "bio")}),
+        ("Role", {"fields": ("is_cr",)}),
         (
             "Permissions",
             {

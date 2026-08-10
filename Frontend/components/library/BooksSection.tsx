@@ -81,14 +81,14 @@ export default function BooksSection() {
   const filterPill = (active: boolean) =>
     `rounded-full px-4 py-1.5 text-sm font-semibold transition-all duration-200 ${
       active
-        ? "bg-primary text-ink shadow-soft"
+        ? "bg-primary text-white shadow-soft"
         : "bg-white text-slate-600 shadow-sm hover:bg-slate-100 hover:text-ink"
     }`;
 
   return (
     <section id="books" className="scroll-mt-20 flex flex-col gap-6">
       {/* Search + filters bar */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-card p-5 shadow-soft sm:p-6">
+      <div className="flex flex-col gap-4 rounded-3xl glass p-5 shadow-soft ring-1 ring-white/60 sm:p-6">
         <div className="relative w-full sm:max-w-md">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -127,7 +127,7 @@ export default function BooksSection() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-3xl bg-card px-6 py-16 text-center shadow-soft">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-3xl glass px-6 py-16 text-center shadow-soft">
           <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-light text-primary-dark shadow-card">
             <SearchX className="h-8 w-8" />
           </span>
@@ -146,7 +146,7 @@ export default function BooksSection() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage === 1}
             aria-label="Previous page"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-primary hover:text-ink hover:shadow-soft disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-soft disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -159,7 +159,7 @@ export default function BooksSection() {
               aria-current={p === safePage ? "page" : undefined}
               className={`h-9 w-9 rounded-full text-sm font-semibold transition-all duration-200 ${
                 p === safePage
-                  ? "bg-primary text-ink shadow-soft"
+                  ? "bg-primary text-white shadow-soft"
                   : "bg-white text-slate-600 shadow-sm hover:bg-slate-100 hover:text-ink"
               }`}
             >
@@ -172,7 +172,7 @@ export default function BooksSection() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
             aria-label="Next page"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-primary hover:text-ink hover:shadow-soft disabled:pointer-events-none disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-soft disabled:pointer-events-none disabled:opacity-40"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -180,7 +180,7 @@ export default function BooksSection() {
       ) : null}
 
       {/* PDF upload demo — fully client-side */}
-      <div className="rounded-3xl border-2 border-dashed border-primary/40 bg-card/70 p-5 shadow-card sm:p-6">
+      <div className="rounded-3xl border-2 border-dashed border-primary/40 glass-soft p-5 shadow-card sm:p-6">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark shadow-card">
@@ -200,7 +200,7 @@ export default function BooksSection() {
 
           <label
             htmlFor="pdf-upload"
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98]"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98]"
           >
             <FileText className="h-4 w-4" />
             Choose PDF

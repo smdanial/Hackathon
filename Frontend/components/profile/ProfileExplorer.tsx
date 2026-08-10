@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AtSign,
+  BadgeCheck,
   Camera,
   Check,
   CheckCircle2,
@@ -15,7 +16,9 @@ import {
   Pencil,
   Phone,
   School,
+  ShieldCheck,
   UserRound,
+  ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
@@ -26,6 +29,7 @@ import {
   updateStoredStudent,
   type Student,
 } from "@/lib/auth";
+import { DEPARTMENTS } from "@/lib/departments";
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-ink shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30";
@@ -139,6 +143,9 @@ export default function ProfileExplorer() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  // CR verification: re-checks the authoritative role from the server.
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
 
   // Live (edited) values vs. the last-saved snapshot — drives the Save button.
   const [profile, setProfile] = useState<ProfileForm>({
@@ -289,6 +296,33 @@ export default function ProfileExplorer() {
     }
   };
 
+  /** Re-confirms the CR role straight from the API and refreshes the chip. */
+  const handleVerifyRole = async () => {
+    setVerifying(true);
+    setSaveError(null);
+    try {
+      const me = await apiRequest<Student>("/auth/me/", {
+        headers: authHeaders(),
+      });
+      updateStoredStudent(me);
+      setStudent(me);
+      setVerifyMessage(
+        me.is_cr
+          ? "Verified — you are a Class Representative."
+          : "Verified — you are a regular student. The CR role is granted by an admin from the admin panel."
+      );
+    } catch (err) {
+      setVerifyMessage(null);
+      setSaveError(
+        err instanceof ApiError
+          ? firstErrorMessage(err.body)
+          : "Could not verify your role. Is the backend running?"
+      );
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await apiRequest("/auth/logout/", {
@@ -348,7 +382,7 @@ export default function ProfileExplorer() {
       </header>
 
       <section className="mx-auto w-full max-w-3xl">
-        <div className="overflow-hidden rounded-3xl bg-card shadow-soft">
+        <div className="overflow-hidden rounded-3xl glass-strong shadow-soft ring-1 ring-white/60">
           {/* Success confirmation */}
           {showSaved ? (
             <div
@@ -388,7 +422,7 @@ export default function ProfileExplorer() {
                   onClick={() => fileInputRef.current?.click()}
                   aria-label="Upload a new profile picture"
                   title="Upload a new profile picture"
-                  className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary-dark shadow-soft ring-2 ring-card transition-all duration-200 hover:scale-110 active:scale-95"
+                  className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary-dark shadow-soft ring-2 ring-white transition-all duration-200 hover:scale-110 active:scale-95"
                 >
                   <Camera className="h-5 w-5" />
                 </button>
@@ -409,12 +443,72 @@ export default function ProfileExplorer() {
                 <p className="mt-0.5 truncate text-sm text-slate-600">
                   {profile.email}
                 </p>
-                <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-                  <GraduationCap className="h-3.5 w-3.5 text-primary-dark" />
-                  {student?.student_id}
-                </span>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                    <GraduationCap className="h-3.5 w-3.5 text-primary-dark" />
+                    {student?.student_id}
+                  </span>
+                  {student?.is_cr ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      CR · Class Representative
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                      <UserRound className="h-3.5 w-3.5 text-primary-dark" />
+                      Student
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Role verification */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark shadow-card">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    {student?.is_cr
+                      ? "Class Representative"
+                      : "Regular student"}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {student?.is_cr
+                      ? "You can book rooms and post class & lab notices."
+                      : "The CR role unlocks room booking and class/lab notice posting."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleVerifyRole}
+                disabled={verifying}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {verifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BadgeCheck className="h-4 w-4" />
+                )}
+                {verifying ? "Verifying…" : "Verify CR status"}
+              </button>
+            </div>
+
+            {verifyMessage ? (
+              <p
+                role="status"
+                className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                  student?.is_cr
+                    ? "bg-success-light text-emerald-800"
+                    : "bg-warning-light text-amber-800"
+                }`}
+              >
+                {verifyMessage}
+              </p>
+            ) : null}
 
             <hr className="border-slate-300/60" />
 
@@ -437,14 +531,38 @@ export default function ProfileExplorer() {
                 onChange={updateField("email")}
                 placeholder="you@university.edu"
               />
-              <ProfileField
-                id="profile-department"
-                label="Department"
-                icon={School}
-                value={profile.department}
-                onChange={updateField("department")}
-                placeholder="Your department"
-              />
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="profile-department" className={labelClass}>
+                  Department
+                </label>
+                <div className="relative">
+                  <School className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <select
+                    id="profile-department"
+                    value={profile.department}
+                    onChange={(e) => updateField("department")(e.target.value)}
+                    required
+                    className={`${inputClass} appearance-none pr-11 pl-11`}
+                  >
+                    {/* Keep any legacy free-text value selectable so it is
+                        never silently dropped. */}
+                    {profile.department &&
+                    !DEPARTMENTS.includes(
+                      profile.department as (typeof DEPARTMENTS)[number]
+                    ) ? (
+                      <option value={profile.department}>
+                        {profile.department}
+                      </option>
+                    ) : null}
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
               <ProfileField
                 id="profile-phone"
                 label="Phone Number"
@@ -497,7 +615,7 @@ export default function ProfileExplorer() {
                 disabled={!hasChanges || saving}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 active:scale-[0.98] sm:text-base ${
                   hasChanges && !saving
-                    ? "bg-primary text-ink shadow-soft hover:bg-primary-dark hover:text-white hover:shadow-lift"
+                    ? "bg-primary text-white shadow-soft hover:bg-primary-dark hover:text-white hover:shadow-lift"
                     : "cursor-not-allowed bg-primary/40 text-ink/60"
                 }`}
               >
