@@ -4,7 +4,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
 
-from .models import Student
+from .models import DEPARTMENTS, Student
 
 
 def _lookup_student(identifier):
@@ -40,13 +40,24 @@ class StudentSerializer(serializers.ModelSerializer):
             "department",
             "bio",
             "profile_picture",
+            "is_cr",
         ]
-        read_only_fields = ["id", "student_id"]
+        # ``is_cr`` is read-only: the role is granted by an admin from the
+        # admin panel, never self-assigned.
+        read_only_fields = ["id", "student_id", "is_cr"]
 
 
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True)
+    # Department is required at signup (dropdown on the signup form). It also
+    # drives department-scoped class/lab notices.
+    department = serializers.ChoiceField(
+        choices=DEPARTMENTS,
+        error_messages={
+            "invalid_choice": "Please select a valid department."
+        },
+    )
 
     class Meta:
         model = Student
@@ -55,6 +66,7 @@ class SignupSerializer(serializers.ModelSerializer):
             "email",
             "student_id",
             "phone",
+            "department",
             "password",
             "confirm_password",
         ]

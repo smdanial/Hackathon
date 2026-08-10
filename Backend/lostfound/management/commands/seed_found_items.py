@@ -11,6 +11,7 @@ Usage: python manage.py seed_found_items
 
 from django.core.management.base import BaseCommand
 
+from accounts.models import Student
 from lostfound.models import FoundItem
 
 
@@ -59,6 +60,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         created = 0
+        # Attach the seeded posts to the demo student when present, so the
+        # Received button has an owner to work with in the dev environment.
+        arif = Student.objects.filter(student_id="NIT-2101004").first()
         for data in ITEMS:
             data = dict(data)
             item, was_created = FoundItem.objects.update_or_create(
@@ -68,6 +72,9 @@ class Command(BaseCommand):
             )
             if was_created:
                 created += 1
+            if arif and item.reported_by_id is None:
+                item.reported_by = arif
+                item.save(update_fields=["reported_by"])
 
         self.stdout.write(
             self.style.SUCCESS(

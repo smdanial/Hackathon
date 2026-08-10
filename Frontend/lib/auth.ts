@@ -10,6 +10,9 @@ export interface Student {
   department?: string;
   bio?: string;
   profile_picture?: string | null;
+  /** Class Representative — granted by an admin; required to book rooms
+      and to post/update class & lab notices. */
+  is_cr?: boolean;
 }
 
 export interface AuthResponse {

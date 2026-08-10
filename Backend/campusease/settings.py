@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'accounts',
     'rooms',
     'lostfound',
+    'notices',
 ]
 
 MIDDLEWARE = [
@@ -136,7 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# The campus runs on Bangladesh time. Booking windows are picked by students
+# in that frame of reference, so "now" for the future-check and for expiring
+# finished bookings must be the Dhaka wall clock — never the container's UTC.
+TIME_ZONE = 'Asia/Dhaka'
 
 USE_I18N = True
 
@@ -156,3 +161,26 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email (Resend) — password reset links are emailed when an API key is set;
+# otherwise the API falls back to returning the code in DEBUG.
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get(
+    'RESEND_FROM_EMAIL', 'CampusEase <onboarding@resend.dev>'
+)
+# Base URL of the web app, used in emailed reset links.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
+# Dev logging: print INFO+ from our apps and Django to the console, so
+# email sends (and their failures) are visible in `docker logs backend`.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {'simple': {'format': '[%(levelname)s] %(name)s: %(message)s'}},
+    'handlers': {'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'}},
+    'root': {'handlers': ['console'], 'level': 'INFO'},
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'django.server': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+    },
+}

@@ -274,8 +274,10 @@ class Command(BaseCommand):
             )
             if created:
                 created_rooms += 1
-            # Replace the schedule so re-seeding reflects edits to this file.
-            room.schedule.all().delete()
+            # Replace the seeded schedule so re-seeding reflects edits to this
+            # file — but keep entries created by student bookings (they are
+            # linked to RoomBooking and disappear when the booking ends).
+            room.schedule.filter(booking__isnull=True).delete()
             ScheduleEntry.objects.bulk_create(
                 ScheduleEntry(room=room, **item) for item in schedule
             )

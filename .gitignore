@@ -1,0 +1,8 @@
+# Local environment / secrets — never commit real keys.
+.env
+.env.*
+!.env.example
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db

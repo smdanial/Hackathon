@@ -12,9 +12,8 @@ import type { LucideIcon } from "lucide-react";
 import {
   NOTICE_CATEGORY_LABELS,
   formatNoticeTimestamp,
-  getNoticesByCategory,
 } from "@/lib/mockNotices";
-import type { NoticeCategory } from "@/lib/mockNotices";
+import type { Notice, NoticeCategory } from "@/lib/mockNotices";
 
 /** Icon shown in the modal header for each segment. */
 const CATEGORY_ICONS: Record<NoticeCategory, LucideIcon> = {
@@ -27,16 +26,21 @@ const CATEGORY_ICONS: Record<NoticeCategory, LucideIcon> = {
 interface NoticeModalProps {
   /** The segment whose notices this modal shows. */
   category: NoticeCategory;
+  /** The notices for that segment, newest first. */
+  notices: Notice[];
   onClose: () => void;
 }
 
 /**
  * Shared modal listing every notice for one segment (class / club / lab / EMS),
- * newest first, with full posted timestamps. Used by both the navbar dropdown
- * and the Notices page.
+ * newest first, with full posted timestamps. The notices are passed in by the
+ * Notices page (which owns the API fetch).
  */
-export default function NoticeModal({ category, onClose }: NoticeModalProps) {
-  const notices = getNoticesByCategory(category);
+export default function NoticeModal({
+  category,
+  notices,
+  onClose,
+}: NoticeModalProps) {
   const Icon = CATEGORY_ICONS[category];
 
   // Keep the latest onClose without re-adding the listeners on every render.
@@ -69,12 +73,12 @@ export default function NoticeModal({ category, onClose }: NoticeModalProps) {
     >
       {/* Backdrop — clicking it closes the modal */}
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-card shadow-lift">
+      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark">
@@ -108,7 +112,7 @@ export default function NoticeModal({ category, onClose }: NoticeModalProps) {
             notices.map((notice) => (
               <article
                 key={notice.id}
-                className="rounded-xl bg-white/70 p-4 shadow-card transition-colors duration-200 hover:bg-white/90"
+                className="rounded-xl bg-white/70 p-4 shadow-card backdrop-blur-sm transition-colors duration-200 hover:bg-white/90"
               >
                 <h3 className="font-heading text-base font-semibold text-ink">
                   {notice.title}

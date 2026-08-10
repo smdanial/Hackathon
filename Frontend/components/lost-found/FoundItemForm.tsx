@@ -128,7 +128,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
 
   return (
     <section id="report-found" className="mx-auto w-full max-w-2xl scroll-mt-20">
-      <div className="overflow-hidden rounded-3xl bg-card shadow-soft">
+      <div className="overflow-hidden rounded-3xl glass-strong shadow-soft ring-1 ring-white/60">
         {/* Success confirmation */}
         {justPosted ? (
           <div
@@ -309,7 +309,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
             ) : (
               <label
                 htmlFor="item-photo"
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/50 bg-white/70 px-4 py-8 text-center transition-all duration-200 hover:border-primary hover:bg-white"
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/50 bg-white/70 px-4 py-8 text-center backdrop-blur-sm transition-all duration-200 hover:border-primary hover:bg-white"
               >
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light text-primary-dark shadow-card">
                   <ImagePlus className="h-6 w-6" />
@@ -335,7 +335,7 @@ export default function FoundItemForm({ onPost }: FoundItemFormProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-primary disabled:hover:text-ink sm:text-base"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-primary disabled:hover:text-white sm:text-base"
           >
             {submitting ? (
               <>

@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .emails import send_password_reset_email
 from .models import Student
 from .serializers import (
     LoginSerializer,
@@ -100,10 +101,12 @@ class LogoutView(APIView):
 class PasswordResetView(APIView):
     """Step 1 of the forgot-password flow.
 
-    Looks up the account by email or student ID and generates a reset token.
-    Always returns success (whether or not the account exists) to avoid
-    revealing which identifiers are registered. In DEBUG the uidb64 + token
-    are included in the response — the dev stand-in for a reset email.
+    Looks up the account by email or student ID, generates a reset token and
+    emails the student a reset link via Resend. Always returns success
+    (whether or not the account exists) to avoid revealing which identifiers
+    are registered. Only when no email could be sent (no RESEND_API_KEY, or
+    Resend rejected the send) does DEBUG include the uidb64 + token in the
+    response as the dev fallback.
     """
 
     permission_classes = [AllowAny]
@@ -128,11 +131,12 @@ class PasswordResetView(APIView):
         if student is not None and student.is_active:
             uidb64 = urlsafe_base64_encode(force_bytes(student.pk))
             token = PasswordResetTokenGenerator().make_token(student)
-            if settings.DEBUG:
-                # Dev stand-in for the emailed reset link — see frontend.
+            emailed = send_password_reset_email(student, uidb64, token)
+            if not emailed and settings.DEBUG:
+                # No working email provider in this environment — surface the
+                # code so the flow can still be completed (dev fallback).
                 data["uidb64"] = uidb64
                 data["token"] = token
-            # Production: email uidb64 + token (or a link containing them).
         return Response(data)
 
 

@@ -28,17 +28,25 @@ browser, so both services must be up (`docker compose ps`).
 
 | Method | Endpoint             | Auth        | Body / notes                                            |
 | ------ | -------------------- | ----------- | ------------------------------------------------------- |
-| POST   | `/api/auth/signup/`  | —           | `full_name`, `email`, `student_id`, `phone`, `password`, `confirm_password` → `{ token, student }` |
+| POST   | `/api/auth/signup/`  | —           | `full_name`, `email`, `student_id`, `phone`, `department` (`CSE`/`EEE`/`TE`/`IPE`/`FDAE` — required dropdown), `password`, `confirm_password` → `{ token, student }` |
 | POST   | `/api/auth/login/`   | —           | `identifier` (email **or** student ID) + `password` → `{ token, student }` |
 | GET    | `/api/auth/me/`      | Token       | Returns the current student profile                     |
-| PATCH  | `/api/auth/me/`      | Token       | Update profile: `full_name`, `email`, `phone`, `department`, `bio`, `profile_picture` (multipart for the image). `student_id` is read-only |
+| PATCH  | `/api/auth/me/`      | Token       | Update profile: `full_name`, `email`, `phone`, `department`, `bio`, `profile_picture` (multipart for the image). `student_id` and `is_cr` are read-only |
 | POST   | `/api/auth/logout/`  | Token       | Revokes the current token (204)                         |
 | POST   | `/api/auth/password-reset/` | —       | Forgot password: `identifier` (email or student ID). In DEBUG the response includes `uidb64` + `token` (the dev stand-in for a reset email) |
 | POST   | `/api/auth/password-reset/confirm/` | — | Finish the reset: `uidb64`, `token`, `new_password`, `confirm_password`. Revokes existing tokens |
 | GET    | `/api/rooms/`        | —           | All rooms with their daily schedules                    |
-| GET    | `/api/lost-found/`   | —           | All reported found items (newest first)                 |
-| POST   | `/api/lost-found/`   | —           | Report a found item: `item_name`, `category`, `description`, `location_found`, `finder_name`, `finder_phone`, optional `image` (multipart) |
-| GET    | `/admin/`            | —           | Django admin — dev superuser: `admin@campusease.com` / `admin12345`       |
+| GET    | `/api/rooms/bookings/` | Token     | The logged-in student's room bookings                   |
+| POST   | `/api/rooms/bookings/` | Token     | Book a room — **CRs only** (403 for regular students): `room`, `date` (class day, e.g. `2026-08-12`), `class_type` (`regular`/`reschedule`), `department` (`CSE`/`EEE`/`TE`/`IPE`/`FDAE`), `class_name`, `start_time`, `end_time` (HH:MM). Adds the class to that day's schedule so everyone sees it booked; overlapping slots on the same day and past end times are rejected. Times are judged on the **Asia/Dhaka campus clock** (so an 8–11 AM class can be booked for tomorrow at any hour) |
+| DELETE | `/api/rooms/bookings/<id>/` | Token | Cancel (delete) one of the caller's bookings (204). Finished bookings are released automatically |
+| GET    | `/api/lost-found/`   | Token       | All reported found items (newest first) — login required  |
+| POST   | `/api/lost-found/`   | Token       | Report a found item: `item_name`, `category`, `description`, `location_found`, `finder_name`, `finder_phone`, optional `image` (multipart). Attached to the logged-in student |
+| POST   | `/api/lost-found/<id>/received/` | Token | Mark a found item as received — only the student who reported it (403 otherwise) |
+| GET    | `/api/notices/`      | —           | Notices, newest first (public). Pass `?department=CSE` to include that department's class/lab notices; without it (or an anonymous visitor) only campus-wide club/EMS notices are returned. Class/lab notices are department-scoped — students only ever see their own department's |
+| POST   | `/api/notices/`      | Token       | Post a notice — **CRs only**, `category` must be `class` or `lab`. `department` is set automatically from the posting CR's own department (never from the payload) |
+| PATCH   | `/api/notices/<id>/` | Token       | Update a notice — **CRs only**, and only class/lab notices of the CR's **own department** (403 otherwise) |
+| DELETE | `/api/notices/<id>/` | Token       | Delete a notice — **CRs only**, own-department class/lab notices (204) |
+| GET    | `/admin/`            | —           | Django admin — dev superuser: `admin@campusease.com` / `admin12345`. The student list has a **CR** column you can tick directly to grant the Class Representative role |
 
 Authenticated requests send `Authorization: Token <token>`.
 
@@ -49,7 +57,15 @@ profile:
 
 - Email: `arif@student.edu` — Student ID: `NIT-2101004`
 - Password: `hackathon123`
+- Role: **CR** (`is_cr = True`) — the demo CR, so room booking and notice
+  posting work out of the box. Grant/revoke the role from the Django admin
+  (Students list → CR column, or the Role section of a student's change page).
+- Department: `CSE` — the demo CR's class/lab notices are seeded to CSE.
+  `nusrat@student.edu` (`hackathon123`) is a **EEE** regular student, handy
+  for testing department scoping: she sees only campus-wide (club/EMS)
+  notices, never CSE class/lab ones.
 
+Starter notices can be (re)seeded with `python manage.py seed_notices`.
 ## Config
 
 - `CORS_ALLOW_ALL_ORIGINS` is enabled while `DEBUG = True` so the Next.js dev

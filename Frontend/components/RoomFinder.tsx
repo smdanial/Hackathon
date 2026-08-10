@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
   ChevronDown,
@@ -15,7 +15,7 @@ import type { LucideIcon } from "lucide-react";
 import RoomModal from "@/components/RoomModal";
 import { getRoomLabel } from "@/lib/mockRooms";
 import type { Room } from "@/lib/mockRooms";
-import { formatTime, getRoomStatus } from "@/lib/getRoomStatus";
+import { formatTime, getRoomStatus, toISODate } from "@/lib/getRoomStatus";
 import type { RoomStatus } from "@/lib/getRoomStatus";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 
@@ -27,6 +27,8 @@ const ALL = "all";
 /** Room shape as served by the Django API (snake_case). */
 interface ApiScheduleEntry {
   id: number;
+  /** Null = repeats every day (seeded schedule); set = one day only (booking). */
+  date: string | null;
   start_time: string;
   end_time: string;
   class_name: string;
@@ -42,20 +44,28 @@ interface ApiRoom {
   schedule: ApiScheduleEntry[];
 }
 
-/** Maps an API room to the frontend Room shape used by the status helpers. */
+/** Maps an API room to the frontend Room shape used by the status helpers.
+ *
+ * Only today's entries make it into the grid: recurring entries (date null)
+ * plus bookings for today. A booking for another day must not mark the room
+ * occupied (or "free until…") today.
+ */
 function toRoom(api: ApiRoom): Room {
+  const today = toISODate(new Date());
   return {
     id: String(api.id),
     building: api.building,
     floor: api.floor,
     roomNumber: api.room_number,
     capacity: api.capacity,
-    schedule: api.schedule.map((s) => ({
-      startTime: s.start_time,
-      endTime: s.end_time,
-      className: s.class_name,
-      teacherName: s.teacher_name,
-    })),
+    schedule: api.schedule
+      .filter((s) => s.date === null || s.date === today)
+      .map((s) => ({
+        startTime: s.start_time,
+        endTime: s.end_time,
+        className: s.class_name,
+        teacherName: s.teacher_name,
+      })),
   };
 }
 
@@ -81,7 +91,7 @@ function FilterSelect({ icon: Icon, label, value, onChange, options }: FilterSel
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none rounded-full bg-card py-2.5 pl-10 pr-10 text-sm font-semibold text-ink shadow-card transition-all duration-200 hover:shadow-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="appearance-none rounded-full glass py-2.5 pl-10 pr-10 text-sm font-semibold text-ink shadow-card transition-all duration-200 hover:shadow-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -108,7 +118,7 @@ function RoomCard({ room, status, onSelect }: RoomCardProps) {
     <button
       type="button"
       onClick={onSelect}
-      className={`group flex flex-col gap-4 rounded-2xl bg-card p-5 text-left shadow-card ring-1 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+      className={`group flex flex-col gap-4 rounded-2xl glass p-5 text-left shadow-card ring-1 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         free ? "ring-success/40" : "ring-warning/50"
       }`}
     >
@@ -196,10 +206,14 @@ export default function RoomFinder() {
     return () => clearInterval(timer);
   }, []);
 
+  // Just the network call — state updates live in the callers below so the
+  // mount effect stays a plain promise chain (no sync setState-in-effect).
+  const loadRooms = useCallback(() => apiRequest<ApiRoom[]>("/rooms/"), []);
+
   // Fetch rooms once on mount.
   useEffect(() => {
     let cancelled = false;
-    apiRequest<ApiRoom[]>("/rooms/")
+    loadRooms()
       .then((data) => {
         if (!cancelled) setRooms(data.map(toRoom));
       })
@@ -218,7 +232,21 @@ export default function RoomFinder() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadRooms]);
+
+  // Re-fetch after a booking is created/cancelled so booked slots appear
+  // (and released slots disappear) immediately.
+  const refreshRooms = useCallback(() => {
+    loadRooms()
+      .then((data) => setRooms(data.map(toRoom)))
+      .catch((err: unknown) => {
+        setError(
+          err instanceof ApiError
+            ? firstErrorMessage(err.body)
+            : "Could not load rooms. Is the backend running?"
+        );
+      });
+  }, [loadRooms]);
 
   const buildings = useMemo(
     () => [...new Set(rooms.map((room) => room.building))].sort(),
@@ -321,7 +349,7 @@ export default function RoomFinder() {
             })),
           ]}
         />
-        <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-xs font-semibold text-slate-600 shadow-card">
+        <span className="ml-auto inline-flex items-center gap-2 rounded-full glass px-4 py-2 text-xs font-semibold text-slate-600 shadow-card">
           <RefreshCw className="h-3.5 w-3.5 text-primary-dark" />
           As of{" "}
           {now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
@@ -330,7 +358,7 @@ export default function RoomFinder() {
 
       {/* Room grid — same breakpoints as the home feature cards */}
       {visibleRooms.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl bg-card px-6 py-16 text-center shadow-card">
+        <div className="flex flex-col items-center gap-4 rounded-2xl glass px-6 py-16 text-center shadow-card">
           <DoorOpen className="h-10 w-10 text-primary-dark" />
           <p className="text-sm font-medium text-slate-600">
             No rooms match these filters.
@@ -341,7 +369,7 @@ export default function RoomFinder() {
               setBuilding(ALL);
               setFloor(ALL);
             }}
-            className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-ink shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white active:scale-95"
+            className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white active:scale-95"
           >
             Clear filters
           </button>
@@ -365,6 +393,7 @@ export default function RoomFinder() {
           room={selectedRoom}
           now={now}
           onClose={() => setSelectedRoom(null)}
+          onBookingChanged={refreshRooms}
         />
       ) : null}
     </div>

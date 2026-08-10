@@ -6,11 +6,11 @@ import type { LucideIcon } from "lucide-react";
 import type { InputHTMLAttributes } from "react";
 
 const FIELD_BASE =
-  "w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-ink shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-[#4B3F94] focus:ring-2 focus:ring-[#4B3F94]/15";
+  "w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm text-ink shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15";
 
-/** Shared indigo gradient primary button used by both auth pages. */
+/** Shared black primary button used by both auth pages. */
 export const PRIMARY_BTN =
-  "w-full rounded-xl bg-linear-to-r from-[#4B3F94] to-[#3E39B0] py-3 font-heading text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:shadow-lift hover:brightness-110 active:scale-[0.98]";
+  "w-full rounded-xl bg-primary py-3 font-heading text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:shadow-lift active:scale-[0.98]";
 
 interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;

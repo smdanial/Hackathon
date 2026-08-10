@@ -2,6 +2,11 @@ services:
   backend:
     build: ./Backend
     command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      # Read from the root .env file (docker compose loads it automatically).
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-}
+      - FRONTEND_URL=${FRONTEND_URL:-}
     volumes:
       - ./Backend:/app
     ports:

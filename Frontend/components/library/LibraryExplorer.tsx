@@ -29,7 +29,7 @@ export default function LibraryExplorer({ initialTab = "books" }: LibraryExplore
   const pill = (active: boolean) =>
     `flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200 ${
       active
-        ? "bg-primary text-ink shadow-soft"
+        ? "bg-primary text-white shadow-soft"
         : "text-slate-600 hover:bg-white/70 hover:text-ink"
     }`;
 
@@ -53,7 +53,7 @@ export default function LibraryExplorer({ initialTab = "books" }: LibraryExplore
         <div
           role="tablist"
           aria-label="Library sections"
-          className="flex w-fit items-center gap-1 rounded-full bg-card p-1.5 shadow-card"
+          className="flex w-fit items-center gap-1 rounded-full glass p-1.5 shadow-card"
         >
           <button
             type="button"

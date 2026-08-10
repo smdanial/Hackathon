@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { DoorOpen, Layers, Users, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarCheck, DoorOpen, Layers, Users, X } from "lucide-react";
 import type { Room } from "@/lib/mockRooms";
 import { getRoomLabel } from "@/lib/mockRooms";
 import { buildDayTimeline, formatTime, getRoomStatus } from "@/lib/getRoomStatus";
+import BookingModal from "@/components/BookingModal";
 
 interface RoomModalProps {
   /** The room whose full-day schedule this modal shows. */
@@ -12,6 +13,8 @@ interface RoomModalProps {
   /** Current time — re-derives the active slot highlight while open. */
   now: Date;
   onClose: () => void;
+  /** Called after a booking is created/cancelled so the grid can refresh. */
+  onBookingChanged?: () => void;
 }
 
 /**
@@ -20,9 +23,15 @@ interface RoomModalProps {
  * the same UX conventions as NoticeModal (Escape / backdrop close, body
  * scroll-lock, rounded-2xl soft-shadow card).
  */
-export default function RoomModal({ room, now, onClose }: RoomModalProps) {
+export default function RoomModal({
+  room,
+  now,
+  onClose,
+  onBookingChanged,
+}: RoomModalProps) {
   const timeline = buildDayTimeline(room, now);
   const status = getRoomStatus(room, now);
+  const [bookingOpen, setBookingOpen] = useState(false);
 
   // Keep the latest onClose without re-adding the listeners on every render.
   const onCloseRef = useRef(onClose);
@@ -56,12 +65,12 @@ export default function RoomModal({ room, now, onClose }: RoomModalProps) {
     >
       {/* Backdrop — clicking it closes the modal */}
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-card shadow-lift">
+      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark">
@@ -107,8 +116,8 @@ export default function RoomModal({ room, now, onClose }: RoomModalProps) {
                   slot.isActive
                     ? "bg-primary/30 ring-2 ring-primary"
                     : slot.entry
-                      ? "bg-white/70 hover:bg-white/90"
-                      : "border border-dashed border-slate-300 bg-white/40"
+                      ? "bg-white/70 backdrop-blur-sm hover:bg-white/90"
+                      : "border border-dashed border-slate-300 bg-white/40 backdrop-blur-sm"
                 }`}
               >
                 <div className="flex flex-wrap items-center gap-2">
@@ -116,7 +125,7 @@ export default function RoomModal({ room, now, onClose }: RoomModalProps) {
                     {formatTime(slot.startTime)} – {formatTime(slot.endTime)}
                   </h3>
                   {slot.isActive ? (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink">
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                       Now
                     </span>
                   ) : null}
@@ -156,8 +165,27 @@ export default function RoomModal({ room, now, onClose }: RoomModalProps) {
             </span>
             Schedule updates automatically.
           </p>
+
+          {/* Book this room */}
+          <button
+            type="button"
+            onClick={() => setBookingOpen(true)}
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:bg-primary-dark hover:text-white hover:shadow-lift active:scale-[0.98]"
+          >
+            <CalendarCheck className="h-4 w-4" />
+            Book this room
+          </button>
         </div>
       </div>
+
+      {/* Booking popup — layered above this modal */}
+      {bookingOpen ? (
+        <BookingModal
+          room={room}
+          onClose={() => setBookingOpen(false)}
+          onChanged={onBookingChanged}
+        />
+      ) : null}
     </div>
   );
 }
