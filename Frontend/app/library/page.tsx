@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LibraryExplorer from "@/components/library/LibraryExplorer";
+import RequireAuth from "@/components/RequireAuth";
 
 export const metadata: Metadata = {
   title: "Library · CampusEase",
@@ -16,5 +17,9 @@ export default async function LibraryPage({ searchParams }: LibraryPageProps) {
   const initialTab = tab === "seats" ? "seats" : "books";
   // Key by tab so client-side navigation between ?tab= values remounts the
   // explorer and actually switches sections (useState reads initialTab once).
-  return <LibraryExplorer key={initialTab} initialTab={initialTab} />;
+  return (
+    <RequireAuth>
+      <LibraryExplorer key={initialTab} initialTab={initialTab} />
+    </RequireAuth>
+  );
 }

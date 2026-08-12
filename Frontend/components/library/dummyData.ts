@@ -15,6 +15,8 @@ export interface Book {
   status: BookStatus;
   /** Only present when status is "Taken". Format: DD/MM/YYYY. */
   returnDate?: string;
+  /** Uploaded PDF served by the backend (absolute URL); null for Physical. */
+  pdfUrl?: string | null;
 }
 
 export const PAGE_SIZE = 4;

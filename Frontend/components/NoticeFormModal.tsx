@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
-import { Bell, Loader2, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import type { ChangeEvent, FormEvent } from "react";
+import { Bell, ImagePlus, Link2, Loader2, Paperclip, X } from "lucide-react";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders } from "@/lib/auth";
+import { NOTICE_CATEGORY_SHORT_LABELS } from "@/lib/mockNotices";
 import type { Notice, NoticeCategory } from "@/lib/mockNotices";
 
 /** Notice shape as served by the Django API (snake_case). */
@@ -13,16 +15,16 @@ interface ApiNotice {
   category: NoticeCategory;
   title: string;
   body: string;
+  image: string | null;
+  link_url: string;
+  link_label: string;
+  file: string | null;
+  file_name: string;
   department: string;
   posted_by: number | null;
   posted_by_name: string | null;
   created_at: string;
 }
-
-const CR_CATEGORIES: { value: "class" | "lab"; label: string }[] = [
-  { value: "class", label: "Class" },
-  { value: "lab", label: "Lab" },
-];
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-ink shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/30";
@@ -32,28 +34,62 @@ const labelClass = "text-sm font-semibold text-slate-700";
 interface NoticeFormModalProps {
   /** Existing notice when editing; null/undefined when creating. */
   initial?: Notice | null;
+  /** Categories the signed-in user may post (CR → class/lab, Club Member → club). */
+  allowedCategories: NoticeCategory[];
   onClose: () => void;
   /** Called after a successful create/update with the saved notice. */
   onSaved: (notice: Notice) => void;
 }
 
+/** True when a URL only uses the safe http/https protocols. */
+export function isSafeLink(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Add/edit modal for Class and Lab notices — shown only to CRs. Creates via
- * POST /api/notices/ and updates via PATCH /api/notices/<id>/.
+ * Add/edit modal for notices. The category toggle only offers the categories
+ * the signed-in role may manage; Club notices additionally show an image
+ * upload and a safe link (validated client-side AND by the backend's URL
+ * validator). Submits multipart so the image uploads with the fields.
  */
 export default function NoticeFormModal({
   initial = null,
+  allowedCategories,
   onClose,
   onSaved,
 }: NoticeFormModalProps) {
   const editing = Boolean(initial);
-  const [category, setCategory] = useState<"class" | "lab">(
-    initial?.category === "lab" ? "lab" : "class"
-  );
+  const [category, setCategory] = useState<NoticeCategory>(() => {
+    const current = initial?.category;
+    return current && allowedCategories.includes(current)
+      ? current
+      : allowedCategories[0] ?? "class";
+  });
   const [title, setTitle] = useState(initial?.title ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
+  const [linkUrl, setLinkUrl] = useState(initial?.linkUrl ?? "");
+  const [linkLabel, setLinkLabel] = useState(initial?.linkLabel ?? "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isClub = category === "club";
+
+  // Track the preview blob URL for cleanup only (never read during render).
+  const objectUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    };
+  }, []);
 
   // Keep the latest onClose without re-adding the listener on every render.
   const onCloseRef = useRef(onClose);
@@ -74,6 +110,34 @@ export default function NoticeFormModal({
     };
   }, []);
 
+  const acceptFile = (next: File) => {
+    setFile(next);
+    setError(null);
+  };
+
+  const pickFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.files?.[0];
+    if (!next) return;
+    acceptFile(next);
+    e.currentTarget.value = "";
+  };
+
+  const pickImage = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    const url = URL.createObjectURL(file);
+    objectUrlRef.current = url;
+    setImagePreview(url);
+    setImageFile(file);
+    setError(null);
+    e.currentTarget.value = "";
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -84,32 +148,35 @@ export default function NoticeFormModal({
       setError("Please write the notice body.");
       return;
     }
+    if (linkUrl.trim() && !isSafeLink(linkUrl.trim())) {
+      setError("Only safe links are allowed (http:// or https://).");
+      return;
+    }
+
     setBusy(true);
     setError(null);
     try {
-      const payload = {
-        category,
-        title: title.trim(),
-        body: body.trim(),
-      };
+      const form = new FormData();
+      form.append("category", category);
+      form.append("title", title.trim());
+      form.append("body", body.trim());
+      form.append("link_url", linkUrl.trim());
+      form.append("link_label", linkLabel.trim());
+      if (imageFile) form.append("image", imageFile);
+      if (file) {
+        form.append("file", file);
+        form.append("file_name", file.name);
+      }
+
       const saved = await apiRequest<ApiNotice>(
         initial ? `/notices/${initial.id}/` : "/notices/",
         {
           method: initial ? "PATCH" : "POST",
           headers: authHeaders(),
-          body: JSON.stringify(payload),
+          body: form,
         }
       );
-      onSaved({
-        id: saved.id,
-        category: saved.category,
-        title: saved.title,
-        body: saved.body,
-        postedAt: saved.created_at,
-        postedById: saved.posted_by,
-        postedByName: saved.posted_by_name,
-        department: saved.department ?? "",
-      });
+      onSaved(toNotice(saved));
       onClose();
     } catch (err) {
       setError(
@@ -122,7 +189,9 @@ export default function NoticeFormModal({
     }
   };
 
-  return (
+  const previewSrc = imagePreview ?? initial?.imageUrl ?? null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       role="dialog"
@@ -136,7 +205,7 @@ export default function NoticeFormModal({
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
+      <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary-dark">
@@ -147,7 +216,9 @@ export default function NoticeFormModal({
                 {editing ? "Edit notice" : "Add notice"}
               </h3>
               <p className="text-xs font-medium text-slate-600">
-                Class / Lab notices — visible to everyone
+                {isClub
+                  ? "Club notice — campus-wide, with image & link"
+                  : "Class / Lab notice — visible to your department"}
               </p>
             </div>
           </div>
@@ -162,26 +233,28 @@ export default function NoticeFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
-          <div className="flex flex-col gap-1.5">
-            <span className={labelClass}>Category</span>
-            <div className="grid grid-cols-2 gap-2">
-              {CR_CATEGORIES.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setCategory(option.value)}
-                  aria-pressed={category === option.value}
-                  className={`rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
-                    category === option.value
-                      ? "border-primary bg-primary-light text-primary-dark"
-                      : "border-slate-200 bg-white/60 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+          {allowedCategories.length > 1 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className={labelClass}>Category</span>
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${allowedCategories.length}, minmax(0, 1fr))` }}>
+                {allowedCategories.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setCategory(option)}
+                    aria-pressed={category === option}
+                    className={`rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                      category === option
+                        ? "border-primary bg-primary-light text-primary-dark"
+                        : "border-slate-200 bg-white/60 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {NOTICE_CATEGORY_SHORT_LABELS[option]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="notice-title" className={labelClass}>
@@ -192,7 +265,11 @@ export default function NoticeFormModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Friday's DBMS class moved to Lab 3"
+              placeholder={
+                isClub
+                  ? "e.g. Cultural fest auditions this week"
+                  : "e.g. Friday's DBMS class moved to Lab 3"
+              }
               disabled={busy}
               className={inputClass}
             />
@@ -212,6 +289,119 @@ export default function NoticeFormModal({
               className={`${inputClass} resize-none`}
             />
           </div>
+
+          {/* Class/Lab extras: one optional file attachment (drag & drop) */}
+          {!isClub ? (
+            <div className="flex flex-col gap-1.5">
+              <span className={labelClass}>
+                File <span className="font-normal text-slate-400">(optional)</span>
+              </span>
+              <label
+                htmlFor="notice-file"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  const dropped = e.dataTransfer.files?.[0];
+                  if (dropped) acceptFile(dropped);
+                }}
+                className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-4 text-center text-sm font-semibold text-primary-dark transition-colors duration-200 ${
+                  dragging
+                    ? "border-primary bg-primary-light"
+                    : "border-primary/40 bg-white/60 hover:border-primary/70 hover:bg-white/80"
+                }`}
+              >
+                <Paperclip className="h-4 w-4" />
+                {file
+                  ? `Selected: ${file.name}`
+                  : initial?.fileName
+                    ? `Replace: ${initial.fileName}`
+                    : "Drop a file here, or click to browse…"}
+              </label>
+              <input
+                id="notice-file"
+                type="file"
+                onChange={pickFile}
+                disabled={busy}
+                className="sr-only"
+              />
+            </div>
+          ) : null}
+
+          {/* Club extras: image + safe link */}
+          {isClub ? (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <span className={labelClass}>
+                  Image <span className="font-normal text-slate-400">(optional)</span>
+                </span>
+                {previewSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewSrc}
+                    alt="Notice image preview"
+                    className="h-36 w-full rounded-xl object-cover shadow-sm ring-1 ring-slate-200"
+                  />
+                ) : null}
+                <label
+                  htmlFor="notice-image"
+                  className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-white/60 px-4 py-3 text-sm font-semibold text-primary-dark transition-colors duration-200 hover:border-primary/70 hover:bg-white/80"
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  {imageFile
+                    ? `Selected: ${imageFile.name}`
+                    : initial?.imageUrl
+                      ? "Replace the current image…"
+                      : "Choose an image…"}
+                </label>
+                <input
+                  id="notice-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={pickImage}
+                  disabled={busy}
+                  className="sr-only"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="notice-link" className={labelClass}>
+                  Link <span className="font-normal text-slate-400">(optional, safe http/https only)</span>
+                </label>
+                <div className="relative">
+                  <Link2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="notice-link"
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://…"
+                    disabled={busy}
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="notice-link-label" className={labelClass}>
+                  Link label <span className="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input
+                  id="notice-link-label"
+                  type="text"
+                  value={linkLabel}
+                  onChange={(e) => setLinkLabel(e.target.value)}
+                  placeholder="e.g. Register here"
+                  disabled={busy}
+                  className={inputClass}
+                />
+              </div>
+            </>
+          ) : null}
 
           {error ? (
             <p
@@ -246,6 +436,26 @@ export default function NoticeFormModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
+}
+
+/** Maps an API notice to the frontend Notice shape (camelCase). */
+export function toNotice(api: ApiNotice): Notice {
+  return {
+    id: api.id,
+    category: api.category,
+    title: api.title,
+    body: api.body,
+    postedAt: api.created_at,
+    postedById: api.posted_by,
+    postedByName: api.posted_by_name,
+    department: api.department ?? "",
+    imageUrl: api.image,
+    linkUrl: api.link_url,
+    linkLabel: api.link_label,
+    fileUrl: api.file,
+    fileName: api.file_name,
+  };
 }

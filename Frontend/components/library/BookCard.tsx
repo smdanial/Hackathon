@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Book, BookOpen, CalendarDays, Check, FileText } from "lucide-react";
+import { Book, BookOpen, CalendarDays, Check, FileText, Pencil, Trash2 } from "lucide-react";
 import { SAMPLE_PDF_URL } from "./dummyData";
 import type { Book as BookData } from "./dummyData";
 
 interface BookCardProps {
   book: BookData;
+  /** Librarian-only: edit/delete actions (hidden when omitted). */
+  onEdit?: (book: BookData) => void;
+  onDelete?: (book: BookData) => void;
 }
 
 /**
- * Single book card. Frontend-only: PDFs open a sample document in a new tab
- * (swap SAMPLE_PDF_URL for a real file later), and "Reserve" is a purely
- * visual confirmation state.
+ * Single book card. Anyone can browse and read/reserve; when ``onEdit`` /
+ * ``onDelete`` are provided (Librarians only) the card also shows the
+ * edit and delete actions. PDFs open the backend-uploaded file (falling
+ * back to the sample document for seeded books without one).
  */
-export default function BookCard({ book }: BookCardProps) {
+export default function BookCard({ book, onEdit, onDelete }: BookCardProps) {
   const [reserved, setReserved] = useState(false);
   const [coverFailed, setCoverFailed] = useState(false);
 
@@ -22,7 +26,7 @@ export default function BookCard({ book }: BookCardProps) {
   const isPdf = book.format === "PDF";
 
   const openPdf = () => {
-    window.open(SAMPLE_PDF_URL, "_blank", "noopener,noreferrer");
+    window.open(book.pdfUrl || SAMPLE_PDF_URL, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -52,6 +56,32 @@ export default function BookCard({ book }: BookCardProps) {
           {isPdf ? <FileText className="h-3 w-3" /> : <Book className="h-3 w-3" />}
           {book.format}
         </span>
+
+        {/* Librarian actions */}
+        {onEdit || onDelete ? (
+          <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+            {onEdit ? (
+              <button
+                type="button"
+                onClick={() => onEdit(book)}
+                aria-label={`Edit ${book.title}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-primary-dark active:scale-95"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            ) : null}
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={() => onDelete(book)}
+                aria-label={`Delete ${book.title}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-rose-600 shadow-sm backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-rose-700 active:scale-95"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Body */}

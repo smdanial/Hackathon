@@ -41,10 +41,18 @@ class StudentSerializer(serializers.ModelSerializer):
             "bio",
             "profile_picture",
             "is_cr",
+            "is_librarian",
+            "is_club_member",
         ]
-        # ``is_cr`` is read-only: the role is granted by an admin from the
-        # admin panel, never self-assigned.
-        read_only_fields = ["id", "student_id", "is_cr"]
+        # Roles are read-only: granted by an admin from the admin panel,
+        # never self-assigned.
+        read_only_fields = [
+            "id",
+            "student_id",
+            "is_cr",
+            "is_librarian",
+            "is_club_member",
+        ]
 
 
 class SignupSerializer(serializers.ModelSerializer):
