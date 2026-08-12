@@ -42,6 +42,8 @@ SEED_NOTICES = [
             "contest. Team of three, free food and certificates for all "
             "participants. Register at the club booth or the online form."
         ),
+        "link_url": "https://forms.gle/example-contest-registration",
+        "link_label": "Register here",
     },
     {
         "category": "club",
@@ -136,6 +138,8 @@ class Command(BaseCommand):
                 defaults={
                     "category": item["category"],
                     "body": item["body"],
+                    "link_url": item.get("link_url", ""),
+                    "link_label": item.get("link_label", ""),
                     "department": department if is_scoped else "",
                     "posted_by": student,
                 },

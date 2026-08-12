@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AtSign,
   BadgeCheck,
+  BookMarked,
   Camera,
   Check,
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Palette,
   Pencil,
   Phone,
   School,
@@ -306,10 +308,14 @@ export default function ProfileExplorer() {
       });
       updateStoredStudent(me);
       setStudent(me);
+      const roles: string[] = [];
+      if (me.is_cr) roles.push("a Class Representative");
+      if (me.is_librarian) roles.push("a Librarian");
+      if (me.is_club_member) roles.push("a Club Member");
       setVerifyMessage(
-        me.is_cr
-          ? "Verified — you are a Class Representative."
-          : "Verified — you are a regular student. The CR role is granted by an admin from the admin panel."
+        roles.length > 0
+          ? `Verified — you are ${roles.join(" and ")}.`
+          : "Verified — you are a regular student. Roles are granted by an admin from the admin panel."
       );
     } catch (err) {
       setVerifyMessage(null);
@@ -453,12 +459,25 @@ export default function ProfileExplorer() {
                       <BadgeCheck className="h-3.5 w-3.5" />
                       CR · Class Representative
                     </span>
-                  ) : (
+                  ) : null}
+                  {student?.is_librarian ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                      <BookMarked className="h-3.5 w-3.5" />
+                      Librarian
+                    </span>
+                  ) : null}
+                  {student?.is_club_member ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-700 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                      <Palette className="h-3.5 w-3.5" />
+                      Club Member
+                    </span>
+                  ) : null}
+                  {!student?.is_cr && !student?.is_librarian && !student?.is_club_member ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
                       <UserRound className="h-3.5 w-3.5 text-primary-dark" />
                       Student
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -473,12 +492,26 @@ export default function ProfileExplorer() {
                   <p className="text-sm font-semibold text-ink">
                     {student?.is_cr
                       ? "Class Representative"
-                      : "Regular student"}
+                      : student?.is_librarian
+                        ? "Librarian"
+                        : student?.is_club_member
+                          ? "Club Member"
+                          : "Regular student"}
                   </p>
                   <p className="text-xs text-slate-600">
-                    {student?.is_cr
-                      ? "You can book rooms and post class & lab notices."
-                      : "The CR role unlocks room booking and class/lab notice posting."}
+                    {student?.is_cr && student?.is_librarian
+                      ? "You can book rooms, post class & lab notices, and manage the library's book list."
+                      : student?.is_cr && student?.is_club_member
+                        ? "You can book rooms, post class & lab notices, and post club notices."
+                      : student?.is_librarian && student?.is_club_member
+                        ? "You can manage the library's book list and post club notices."
+                      : student?.is_cr
+                        ? "You can book rooms and post class & lab notices."
+                        : student?.is_librarian
+                          ? "You can manage the library's book list — add, upload and update books."
+                          : student?.is_club_member
+                            ? "You can post and update Club notices, with images and links."
+                            : "Roles like CR, Librarian and Club Member are granted by an admin from the admin panel."}
                   </p>
                 </div>
               </div>
@@ -493,7 +526,7 @@ export default function ProfileExplorer() {
                 ) : (
                   <BadgeCheck className="h-4 w-4" />
                 )}
-                {verifying ? "Verifying…" : "Verify CR status"}
+                {verifying ? "Verifying…" : "Verify my role"}
               </button>
             </div>
 

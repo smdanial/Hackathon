@@ -5,11 +5,13 @@ import {
   Bell,
   ChevronRight,
   GraduationCap,
+  Link2,
   Loader2,
+  Paperclip,
   Pencil,
   Plus,
 } from "lucide-react";
-import NoticeFormModal from "@/components/NoticeFormModal";
+import NoticeFormModal, { isSafeLink, toNotice } from "@/components/NoticeFormModal";
 import NoticeModal from "@/components/NoticeModal";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders, getToken } from "@/lib/auth";
@@ -28,23 +30,15 @@ interface ApiNotice {
   category: NoticeCategory;
   title: string;
   body: string;
+  image: string | null;
+  link_url: string;
+  link_label: string;
+  file: string | null;
+  file_name: string;
   department: string;
   posted_by: number | null;
   posted_by_name: string | null;
   created_at: string;
-}
-
-function toNotice(api: ApiNotice): Notice {
-  return {
-    id: api.id,
-    category: api.category,
-    title: api.title,
-    body: api.body,
-    postedAt: api.created_at,
-    postedById: api.posted_by,
-    postedByName: api.posted_by_name,
-    department: api.department ?? "",
-  };
 }
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -63,19 +57,17 @@ const CATEGORY_BADGES: Record<NoticeCategory, string> = {
   ems: "bg-sky-100 text-sky-600",
 };
 
-/** Categories a CR can manage (add / edit). */
-const CR_CATEGORIES: NoticeCategory[] = ["class", "lab"];
-
 /**
- * Notices board backed by the Django API: everyone reads, CRs can add and
- * update Class and Lab notices. Filter pills + the category modal work on the
- * fetched list; add/edit uses NoticeFormModal.
+ * Notices board backed by the Django API: everyone reads; CRs add and update
+ * Class/Lab notices, Club Members add and update Club notices (with images
+ * and links). Filter pills + the category modal work on the fetched list.
  */
 export default function NoticesBoard() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCr, setIsCr] = useState(false);
+  const [isClubMember, setIsClubMember] = useState(false);
   // The signed-in student's department — class/lab notices are scoped to it.
   const [department, setDepartment] = useState<string | null>(null);
 
@@ -93,13 +85,14 @@ export default function NoticesBoard() {
 
   useEffect(() => {
     let cancelled = false;
-    // The signed-in student's role + department — drives the CR add/edit
+    // The signed-in student's role + department — drives the add/edit
     // actions and the department-scoped notice feed.
     if (getToken()) {
       apiRequest<Student>("/auth/me/", { headers: authHeaders() })
         .then((me) => {
           if (cancelled) return;
           setIsCr(Boolean(me.is_cr));
+          setIsClubMember(Boolean(me.is_club_member));
           const dept = me.department?.trim() ?? "";
           setDepartment(dept || null);
           // Class/lab notices are department-scoped: fetch only this
@@ -179,6 +172,17 @@ export default function NoticesBoard() {
     [refresh]
   );
 
+  // Categories the signed-in roles may manage (add/edit).
+  const canManageCategory = (category: NoticeCategory): boolean =>
+    category === "club"
+      ? isClubMember
+      : (category === "class" || category === "lab") && isCr;
+
+  const allowedCategories = (["class", "club", "lab"] as NoticeCategory[]).filter(
+    (category) => canManageCategory(category)
+  );
+  const canAdd = allowedCategories.length > 0;
+
   const visible =
     filter === "all"
       ? notices
@@ -216,7 +220,7 @@ export default function NoticesBoard() {
           </div>
         </div>
 
-        {isCr ? (
+        {canAdd ? (
           <button
             type="button"
             onClick={openAdd}
@@ -295,8 +299,8 @@ export default function NoticesBoard() {
                     {NOTICE_CATEGORY_SHORT_LABELS[notice.category]}
                   </span>
                   <div className="flex items-center gap-2">
-                    {/* CR-only edit for class/lab notices */}
-                    {isCr && CR_CATEGORIES.includes(notice.category) ? (
+                    {/* Role-gated edit for manageable notices */}
+                    {canManageCategory(notice.category) ? (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -312,12 +316,52 @@ export default function NoticesBoard() {
                     <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-primary-dark" />
                   </div>
                 </div>
+
+                {/* Club image thumbnail */}
+                {notice.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={notice.imageUrl}
+                    alt=""
+                    className="h-40 w-full rounded-xl object-cover shadow-sm ring-1 ring-white/60"
+                  />
+                ) : null}
+
                 <h2 className="font-heading text-base font-semibold text-ink sm:text-lg">
                   {notice.title}
                 </h2>
                 <p className="text-sm leading-relaxed text-slate-700 line-clamp-2">
                   {notice.body}
                 </p>
+
+                {/* Club link — opens in a new tab without opening the modal */}
+                {notice.linkUrl && isSafeLink(notice.linkUrl) ? (
+                  <a
+                    href={notice.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-light px-3.5 py-1.5 text-xs font-semibold text-accent-dark shadow-sm transition-colors duration-200 hover:bg-accent hover:text-white"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    {notice.linkLabel || "Open link"}
+                  </a>
+                ) : null}
+
+                {/* Class/Lab file attachment — opens without opening the modal */}
+                {notice.fileUrl ? (
+                  <a
+                    href={notice.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full bg-sky-100 px-3.5 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition-colors duration-200 hover:bg-sky-200 hover:text-sky-800"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {notice.fileName || "Download file"}
+                  </a>
+                ) : null}
+
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
                   <time dateTime={notice.postedAt}>
                     {formatNoticeTimestamp(notice.postedAt)}
@@ -352,6 +396,7 @@ export default function NoticesBoard() {
       {formOpen ? (
         <NoticeFormModal
           initial={editingNotice}
+          allowedCategories={allowedCategories}
           onClose={() => setFormOpen(false)}
           onSaved={handleSaved}
         />

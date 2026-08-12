@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import BusTracker from "@/components/BusTracker";
+import RequireAuth from "@/components/RequireAuth";
 import { getBusRoute } from "@/lib/mockBusRoutes";
 
 export const metadata: Metadata = {
@@ -17,5 +18,9 @@ export default async function BusPage({ searchParams }: BusPageProps) {
   const initialRoute = getBusRoute(route);
   // Key by route id so client-side navigation between ?route= values remounts
   // the tracker and actually switches maps (useState reads initialRoute once).
-  return <BusTracker key={initialRoute.id} initialRoute={initialRoute} />;
+  return (
+    <RequireAuth>
+      <BusTracker key={initialRoute.id} initialRoute={initialRoute} />
+    </RequireAuth>
+  );
 }

@@ -1,3 +1,5 @@
+import threading
+
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes
@@ -102,11 +104,11 @@ class PasswordResetView(APIView):
     """Step 1 of the forgot-password flow.
 
     Looks up the account by email or student ID, generates a reset token and
-    emails the student a reset link via Resend. Always returns success
-    (whether or not the account exists) to avoid revealing which identifiers
-    are registered. Only when no email could be sent (no RESEND_API_KEY, or
-    Resend rejected the send) does DEBUG include the uidb64 + token in the
-    response as the dev fallback.
+    emails the student a reset link via Resend. Always returns the same
+    success message (whether or not the account exists) so the API never
+    reveals which identifiers are registered, and never exposes the reset
+    code. The email is sent in a background thread so the response stays
+    instant even when the mail provider is slow.
     """
 
     permission_classes = [AllowAny]
@@ -122,22 +124,22 @@ class PasswordResetView(APIView):
         if student is None:
             student = Student.objects.filter(student_id__iexact=identifier).first()
 
-        data = {
-            "detail": (
-                "If an account exists with that email or ID, a password reset "
-                "link has been generated."
-            )
-        }
         if student is not None and student.is_active:
             uidb64 = urlsafe_base64_encode(force_bytes(student.pk))
             token = PasswordResetTokenGenerator().make_token(student)
-            emailed = send_password_reset_email(student, uidb64, token)
-            if not emailed and settings.DEBUG:
-                # No working email provider in this environment — surface the
-                # code so the flow can still be completed (dev fallback).
-                data["uidb64"] = uidb64
-                data["token"] = token
-        return Response(data)
+            threading.Thread(
+                target=send_password_reset_email,
+                args=(student, uidb64, token),
+                daemon=True,
+            ).start()
+        return Response(
+            {
+                "detail": (
+                    "If an account exists with that email or ID, a password "
+                    "reset link has been sent to the email on file."
+                )
+            }
+        )
 
 
 class PasswordResetConfirmView(APIView):

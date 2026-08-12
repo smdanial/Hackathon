@@ -17,6 +17,7 @@ import type { Room } from "@/lib/mockRooms";
 import { getRoomStatus, timeToMinutes, toISODate } from "@/lib/getRoomStatus";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders } from "@/lib/auth";
+import RequireAuth from "@/components/RequireAuth";
 
 /** Room shape as served by the Django API (snake_case). */
 interface ApiScheduleEntry {
@@ -153,7 +154,7 @@ function MiniBars({ data, color = "bg-zinc-900" }: { data: { label: string; valu
   );
 }
 
-export default function Dashboard() {
+function Dashboard() {
   const [now, setNow] = useState(() => new Date());
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -537,5 +538,13 @@ export default function Dashboard() {
         </>
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <RequireAuth>
+      <Dashboard />
+    </RequireAuth>
   );
 }

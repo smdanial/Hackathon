@@ -32,6 +32,22 @@ class Student(AbstractUser):
             "Granted by an admin from the admin panel."
         ),
     )
+    is_librarian = models.BooleanField(
+        "Librarian",
+        default=False,
+        help_text=(
+            "Librarians can add, upload and update the library's book list. "
+            "Granted by an admin from the admin panel."
+        ),
+    )
+    is_club_member = models.BooleanField(
+        "Club Member",
+        default=False,
+        help_text=(
+            "Club Members can post and update Club notices, including images "
+            "and links. Granted by an admin from the admin panel."
+        ),
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name", "student_id"]

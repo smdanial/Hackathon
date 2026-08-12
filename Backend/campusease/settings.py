@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rooms',
     'lostfound',
     'notices',
+    'library',
 ]
 
 MIDDLEWARE = [

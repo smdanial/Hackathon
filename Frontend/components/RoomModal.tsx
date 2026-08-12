@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarCheck, DoorOpen, Layers, Users, X } from "lucide-react";
 import type { Room } from "@/lib/mockRooms";
 import { getRoomLabel } from "@/lib/mockRooms";
@@ -56,7 +57,10 @@ export default function RoomModal({
 
   const free = status.status === "free";
 
-  return (
+  // Rendered through a portal to <body> so the backdrop covers the whole
+  // viewport — including the app shell's navbar — instead of being contained
+  // by the page's stacking context.
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       role="dialog"
@@ -186,6 +190,7 @@ export default function RoomModal({
           onChanged={onBookingChanged}
         />
       ) : null}
-    </div>
+    </div>,
+    document.body
   );
 }

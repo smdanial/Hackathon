@@ -13,6 +13,12 @@ export interface Student {
   /** Class Representative — granted by an admin; required to book rooms
       and to post/update class & lab notices. */
   is_cr?: boolean;
+  /** Librarian — granted by an admin; required to manage the library's
+      book list (add/upload/update). */
+  is_librarian?: boolean;
+  /** Club Member — granted by an admin; required to post and update Club
+      notices (with images and links). */
+  is_club_member?: boolean;
 }
 
 export interface AuthResponse {

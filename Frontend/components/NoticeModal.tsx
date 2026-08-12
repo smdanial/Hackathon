@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   ClipboardList,
   FlaskConical,
   GraduationCap,
+  Link2,
   Palette,
+  Paperclip,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -14,6 +17,7 @@ import {
   formatNoticeTimestamp,
 } from "@/lib/mockNotices";
 import type { Notice, NoticeCategory } from "@/lib/mockNotices";
+import { isSafeLink } from "@/components/NoticeFormModal";
 
 /** Icon shown in the modal header for each segment. */
 const CATEGORY_ICONS: Record<NoticeCategory, LucideIcon> = {
@@ -64,7 +68,10 @@ export default function NoticeModal({
     };
   }, []);
 
-  return (
+  // Rendered through a portal to <body> so the backdrop covers the whole
+  // viewport — including the app shell's navbar — instead of being contained
+  // by the page's stacking context.
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       role="dialog"
@@ -114,12 +121,42 @@ export default function NoticeModal({
                 key={notice.id}
                 className="rounded-xl bg-white/70 p-4 shadow-card backdrop-blur-sm transition-colors duration-200 hover:bg-white/90"
               >
+                {notice.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={notice.imageUrl}
+                    alt=""
+                    className="mt-3 max-h-56 w-full rounded-lg object-cover shadow-sm ring-1 ring-slate-200"
+                  />
+                ) : null}
                 <h3 className="font-heading text-base font-semibold text-ink">
                   {notice.title}
                 </h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
                   {notice.body}
                 </p>
+                {notice.linkUrl && isSafeLink(notice.linkUrl) ? (
+                  <a
+                    href={notice.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent-light px-3.5 py-1.5 text-xs font-semibold text-accent-dark shadow-sm transition-colors duration-200 hover:bg-accent hover:text-white"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    {notice.linkLabel || "Open link"}
+                  </a>
+                ) : null}
+                {notice.fileUrl ? (
+                  <a
+                    href={notice.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3.5 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition-colors duration-200 hover:bg-sky-200 hover:text-sky-800"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {notice.fileName || "Download file"}
+                  </a>
+                ) : null}
                 <time
                   dateTime={notice.postedAt}
                   className="mt-3 block text-xs font-medium text-slate-500"
@@ -131,6 +168,7 @@ export default function NoticeModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
