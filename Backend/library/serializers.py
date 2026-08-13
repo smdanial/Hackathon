@@ -4,10 +4,11 @@ from .models import Book
 
 
 class BookSerializer(serializers.ModelSerializer):
-    """Library book. Readable by everyone; writes are Librarian-only.
+    """Library book. Readable by everyone; writes are gated by role.
 
     ``pdf_file`` is a FileField: it accepts multipart uploads and serializes
-    to an absolute URL (or null when no file is attached).
+    to an absolute URL (or null when no file is attached). ``department`` is
+    blank for campus-wide library books and set for CR department uploads.
     """
 
     pdf_file = serializers.FileField(required=False, allow_null=True)
@@ -28,6 +29,7 @@ class BookSerializer(serializers.ModelSerializer):
             "status",
             "cover_url",
             "pdf_file",
+            "department",
             "return_date",
             "added_by",
             "added_by_name",

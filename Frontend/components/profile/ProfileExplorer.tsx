@@ -9,7 +9,6 @@ import {
   Camera,
   Check,
   CheckCircle2,
-  FileText,
   GraduationCap,
   Loader2,
   Lock,
@@ -23,14 +22,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
-import {
+import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";import {
   authHeaders,
   clearSession,
   getToken,
   updateStoredStudent,
   type Student,
 } from "@/lib/auth";
+import { useSession } from "@/lib/useSession";
 import { DEPARTMENTS } from "@/lib/departments";
 
 const inputClass =
@@ -118,7 +117,6 @@ interface ProfileForm {
   email: string;
   department: string;
   phone: string;
-  bio: string;
 }
 
 /** Monogram fallback while no photo is shown ("Arif Hasan" → "AH"). */
@@ -139,6 +137,9 @@ function initialsOf(name: string): string {
  */
 export default function ProfileExplorer() {
   const router = useRouter();
+  // Bumps when the stored session changes (login, save, or the live poller
+  // picking up admin edits) — re-loads the profile in near real time.
+  const { version: sessionVersion } = useSession();
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -155,7 +156,6 @@ export default function ProfileExplorer() {
     email: "",
     department: "",
     phone: "",
-    bio: "",
   });
   const [savedProfile, setSavedProfile] = useState<ProfileForm>(profile);
 
@@ -184,7 +184,6 @@ export default function ProfileExplorer() {
           email: data.email,
           department: data.department ?? "",
           phone: data.phone,
-          bio: data.bio ?? "",
         };
         setProfile(form);
         setSavedProfile(form);
@@ -209,7 +208,9 @@ export default function ProfileExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+    // Re-load whenever the stored session changes so admin-side edits to the
+    // profile or roles show up here without a refresh.
+  }, [router, sessionVersion]);
 
   // Revoke the avatar blob URL and clear the pending toast timer on unmount.
   useEffect(() => {
@@ -228,8 +229,7 @@ export default function ProfileExplorer() {
     profile.full_name !== savedProfile.full_name ||
     profile.email !== savedProfile.email ||
     profile.department !== savedProfile.department ||
-    profile.phone !== savedProfile.phone ||
-    profile.bio !== savedProfile.bio;
+    profile.phone !== savedProfile.phone;
 
   const updateField = (key: keyof ProfileForm) => (value: string) =>
     setProfile((current) => ({ ...current, [key]: value }));
@@ -258,7 +258,6 @@ export default function ProfileExplorer() {
       form.set("email", profile.email);
       form.set("department", profile.department);
       form.set("phone", profile.phone);
-      form.set("bio", profile.bio);
       if (avatarFile) {
         form.set("profile_picture", avatarFile);
       }
@@ -276,7 +275,6 @@ export default function ProfileExplorer() {
         email: updated.email,
         department: updated.department ?? "",
         phone: updated.phone,
-        bio: updated.bio ?? "",
       };
       setProfile(formSnapshot);
       setSavedProfile(formSnapshot);
@@ -298,25 +296,26 @@ export default function ProfileExplorer() {
     }
   };
 
-  /** Re-confirms the CR role straight from the API and refreshes the chip. */
+  /** Verifies against the admin-managed credentials and auto-grants the
+      matching roles (CR, Librarian, Club Member) straight from the API. */
   const handleVerifyRole = async () => {
     setVerifying(true);
     setSaveError(null);
+    setVerifyMessage(null);
     try {
-      const me = await apiRequest<Student>("/auth/me/", {
+      const result = await apiRequest<{
+        detail: string;
+        granted: string[];
+        roles: string[];
+        student: Student;
+      }>("/auth/verify-role/", {
+        method: "POST",
         headers: authHeaders(),
+        body: JSON.stringify({}),
       });
-      updateStoredStudent(me);
-      setStudent(me);
-      const roles: string[] = [];
-      if (me.is_cr) roles.push("a Class Representative");
-      if (me.is_librarian) roles.push("a Librarian");
-      if (me.is_club_member) roles.push("a Club Member");
-      setVerifyMessage(
-        roles.length > 0
-          ? `Verified — you are ${roles.join(" and ")}.`
-          : "Verified — you are a regular student. Roles are granted by an admin from the admin panel."
-      );
+      updateStoredStudent(result.student);
+      setStudent(result.student);
+      setVerifyMessage(result.detail);
     } catch (err) {
       setVerifyMessage(null);
       setSaveError(
@@ -511,7 +510,7 @@ export default function ProfileExplorer() {
                           ? "You can manage the library's book list — add, upload and update books."
                           : student?.is_club_member
                             ? "You can post and update Club notices, with images and links."
-                            : "Roles like CR, Librarian and Club Member are granted by an admin from the admin panel."}
+                            : "Tap Verify to match your name, department and ID against the admin's role list — matching roles are granted automatically."}
                   </p>
                 </div>
               </div>
@@ -534,7 +533,9 @@ export default function ProfileExplorer() {
               <p
                 role="status"
                 className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                  student?.is_cr
+                  student?.is_cr ||
+                  student?.is_librarian ||
+                  student?.is_club_member
                     ? "bg-success-light text-emerald-800"
                     : "bg-warning-light text-amber-800"
                 }`}
@@ -606,16 +607,6 @@ export default function ProfileExplorer() {
                 placeholder="+880 1XXXXXXXXX"
               />
             </div>
-            <ProfileField
-              id="profile-bio"
-              label="Bio / About"
-              icon={FileText}
-              textarea
-              value={profile.bio}
-              onChange={updateField("bio")}
-              placeholder="A short intro about yourself…"
-            />
-
             {/* Student ID — read-only, not editable */}
             <div className="flex flex-col gap-1.5">
               <span className={labelClass}>Student ID</span>

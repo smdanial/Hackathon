@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ChangeEvent, FormEvent } from "react";
-import { BookPlus, FileText, Loader2, X } from "lucide-react";
+import { BookPlus, FileText, GraduationCap, Loader2, X } from "lucide-react";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders } from "@/lib/auth";
+import { DEPARTMENTS } from "@/lib/departments";
 import type { Book, BookFormat, BookStatus } from "./dummyData";
 
 /** Book shape as served by the Django API (snake_case). */
@@ -18,6 +19,7 @@ export interface ApiBook {
   status: BookStatus;
   cover_url: string;
   pdf_file: string | null;
+  department: string;
   return_date: string | null;
   added_by: number | null;
   added_by_name: string | null;
@@ -40,24 +42,36 @@ interface BookFormModalProps {
   initial?: Book | null;
   /** PDF pre-selected from the upload zone (create flow). */
   presetPdf?: File | null;
+  /** True when the manager is a Librarian — gets the department picker. */
+  librarian?: boolean;
+  /** The signed-in CR's own department (locks books to it, PDF only). */
+  crDepartment?: string | null;
   onClose: () => void;
   /** Called after a successful create/update with the saved book. */
   onSaved: (book: Book) => void;
 }
 
-/** Add/edit modal for the library's book list — shown only to Librarians.
-    Creates via POST /api/library/ and updates via PATCH /api/library/<id>/,
-    using multipart so an uploaded PDF goes to the backend with the fields. */
+/** Add/edit modal for the library's book list.
+    Librarians manage campus-wide (or department-scoped) books; CRs upload
+    PDF books for their own department — the backend forces the department,
+    so the form never sends one for CRs. Creates via POST /api/library/ and
+    updates via PATCH /api/library/<id>/, using multipart so an uploaded PDF
+    goes to the backend with the fields. */
 export default function BookFormModal({
   initial = null,
   presetPdf = null,
+  librarian = false,
+  crDepartment = null,
   onClose,
   onSaved,
 }: BookFormModalProps) {
   const editing = Boolean(initial);
+  // CR uploads are PDFs for the CR's own department; Librarians may choose.
+  const crMode = !librarian && Boolean(crDepartment);
+  const department = crMode ? crDepartment : initial?.department || "";
 
   const [format, setFormat] = useState<BookFormat>(() => {
-    if (presetPdf) return "PDF";
+    if (presetPdf || crMode) return "PDF";
     return initial?.format ?? "Physical";
   });
   const [status, setStatus] = useState<BookStatus>(initial?.status ?? "Available");
@@ -65,6 +79,7 @@ export default function BookFormModal({
   const [author, setAuthor] = useState(initial?.author ?? "");
   const [isbn, setIsbn] = useState(initial?.isbn ?? "");
   const [coverUrl, setCoverUrl] = useState(initial?.coverImageUrl ?? "");
+  const [bookDepartment, setBookDepartment] = useState(department ?? "");
   const [returnDate, setReturnDate] = useState(
     initial?.returnDate ? initial.returnDate.split("/").reverse().join("-") : ""
   );
@@ -133,6 +148,9 @@ export default function BookFormModal({
       form.append("format", format);
       form.append("status", status);
       form.append("cover_url", coverUrl.trim());
+      // Librarians may scope a book to a department; the backend forces the
+      // CR's own department for CR uploads, so no department is sent there.
+      if (librarian && bookDepartment) form.append("department", bookDepartment);
       if (status === "Taken") form.append("return_date", returnDate);
       if (pdfFile) form.append("pdf_file", pdfFile);
 
@@ -185,7 +203,9 @@ export default function BookFormModal({
                 {editing ? "Edit book" : "Add a book"}
               </h3>
               <p className="text-xs font-medium text-slate-600">
-                Library catalogue — Librarians only
+                {crMode
+                  ? `Department PDF — visible to ${crDepartment} students`
+                  : "Library catalogue — Librarians only"}
               </p>
             </div>
           </div>
@@ -201,22 +221,35 @@ export default function BookFormModal({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-5">
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1.5">
-              <span className={labelClass}>Format</span>
-              <div className="grid grid-cols-2 gap-2">
-                {(["Physical", "PDF"] as BookFormat[]).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setFormat(option)}
-                    aria-pressed={format === option}
-                    className={toggleClass(format === option)}
-                  >
-                    {option}
-                  </button>
-                ))}
+            {crMode ? (
+              <div className="flex flex-col gap-1.5">
+                <span className={labelClass}>Format</span>
+                <div className="flex items-center gap-2 rounded-xl bg-primary-light px-3 py-2.5 text-sm font-semibold text-primary-dark">
+                  <FileText className="h-4 w-4" />
+                  PDF
+                </div>
+                <p className="text-xs font-medium text-slate-500">
+                  CR uploads are PDFs for your department.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <span className={labelClass}>Format</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["Physical", "PDF"] as BookFormat[]).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setFormat(option)}
+                      aria-pressed={format === option}
+                      className={toggleClass(format === option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <span className={labelClass}>Status</span>
               <div className="grid grid-cols-2 gap-2">
@@ -234,6 +267,39 @@ export default function BookFormModal({
               </div>
             </div>
           </div>
+
+          {librarian ? (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="book-department" className={labelClass}>
+                Department <span className="font-normal text-slate-400">(blank = campus-wide)</span>
+              </label>
+              <select
+                id="book-department"
+                value={bookDepartment}
+                onChange={(e) => setBookDepartment(e.target.value)}
+                disabled={busy}
+                className={inputClass}
+              >
+                <option value="">Campus-wide (all departments)</option>
+                {DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs font-medium text-slate-500">
+                Campus-wide books are visible to everyone; department books only to that department.
+              </p>
+            </div>
+          ) : crMode ? (
+            <div className="flex flex-col gap-1.5">
+              <span className={labelClass}>Department</span>
+              <div className="flex items-center gap-2 rounded-xl bg-primary-light px-3 py-2.5 text-sm font-semibold text-primary-dark">
+                <GraduationCap className="h-4 w-4" />
+                {crDepartment} — visible only to {crDepartment} students
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="book-title" className={labelClass}>
@@ -389,5 +455,7 @@ export function toBook(api: ApiBook): Book {
       ? api.return_date.split("-").reverse().join("/")
       : undefined,
     pdfUrl: api.pdf_file,
+    department: api.department || undefined,
+    addedByName: api.added_by_name,
   };
 }

@@ -17,6 +17,10 @@ export interface Book {
   returnDate?: string;
   /** Uploaded PDF served by the backend (absolute URL); null for Physical. */
   pdfUrl?: string | null;
+  /** Department-scoped CR upload. Blank/absent = campus-wide library book. */
+  department?: string;
+  /** Full name of the student who uploaded this book, when known. */
+  addedByName?: string | null;
 }
 
 export const PAGE_SIZE = 4;

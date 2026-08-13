@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'lostfound',
     'notices',
     'library',
+    'bus_tracking',
 ]
 
 MIDDLEWARE = [

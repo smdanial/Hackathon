@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/lost-found/', include('lostfound.urls')),
     path('api/notices/', include('notices.urls')),
     path('api/library/', include('library.urls')),
+    path('api/bus/', include('bus_tracking.urls')),
 ]
 
 # Serve uploaded media (profile pictures) in development.

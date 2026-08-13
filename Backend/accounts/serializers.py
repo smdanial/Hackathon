@@ -38,11 +38,12 @@ class StudentSerializer(serializers.ModelSerializer):
             "student_id",
             "phone",
             "department",
-            "bio",
             "profile_picture",
             "is_cr",
             "is_librarian",
             "is_club_member",
+            "role",
+            "assigned_route",
         ]
         # Roles are read-only: granted by an admin from the admin panel,
         # never self-assigned.
@@ -52,6 +53,8 @@ class StudentSerializer(serializers.ModelSerializer):
             "is_cr",
             "is_librarian",
             "is_club_member",
+            "role",
+            "assigned_route",
         ]
 
 

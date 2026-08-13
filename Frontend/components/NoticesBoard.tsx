@@ -16,6 +16,7 @@ import NoticeModal from "@/components/NoticeModal";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders, getToken } from "@/lib/auth";
 import type { Student } from "@/lib/auth";
+import { useSession } from "@/lib/useSession";
 import {
   NOTICE_CATEGORY_SHORT_LABELS,
   formatNoticeTimestamp,
@@ -63,6 +64,9 @@ const CATEGORY_BADGES: Record<NoticeCategory, string> = {
  * and links). Filter pills + the category modal work on the fetched list.
  */
 export default function NoticesBoard() {
+  // Bumps when the stored session changes — re-fetches the role + department
+  // and the notice feed so admin changes land without a reload.
+  const { version: sessionVersion } = useSession();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +149,7 @@ export default function NoticesBoard() {
     return () => {
       cancelled = true;
     };
-  }, [loadNotices]);
+  }, [loadNotices, sessionVersion]);
 
   const refresh = useCallback(() => {
     const dept = department;
