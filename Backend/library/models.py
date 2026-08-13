@@ -1,14 +1,21 @@
 from django.conf import settings
 from django.db import models
 
+from accounts.models import DEPARTMENTS
+
 
 class Book(models.Model):
     """A library book (physical copy or uploaded PDF).
 
     Everyone can browse the catalogue; only Librarians (``is_librarian``) can
-    add books, upload PDFs and update or remove entries. ``pdf_file`` stores
-    the uploaded document; ``cover_url`` is an external cover image
-    (e.g. OpenLibrary) so seeded books can show real covers without uploads.
+    add campus-wide books, upload PDFs and update or remove entries.
+    ``pdf_file`` stores the uploaded document; ``cover_url`` is an external
+    cover image (e.g. OpenLibrary) so seeded books can show real covers
+    without uploads.
+
+    Class Representatives (CRs) can upload PDF books for their own
+    department: those carry ``department`` and are only visible to students
+    of that department. Campus-wide books leave ``department`` blank.
     """
 
     class Format(models.TextChoices):
@@ -30,6 +37,20 @@ class Book(models.Model):
     )
     cover_url = models.URLField(blank=True, default="")
     pdf_file = models.FileField(upload_to="book_pdfs/", blank=True, null=True)
+    # Department scoping: blank = campus-wide library book (managed by
+    # Librarians). Set = a PDF uploaded by the CR of that department, visible
+    # only to students of the same department.
+    department = models.CharField(
+        max_length=10,
+        choices=[(dept, dept) for dept in DEPARTMENTS],
+        blank=True,
+        default="",
+        help_text=(
+            "Blank = campus-wide library book (Librarians). Set = a PDF "
+            "uploaded by the CR of that department, visible only to that "
+            "department."
+        ),
+    )
     # Only meaningful while status is "Taken".
     return_date = models.DateField(null=True, blank=True)
     added_by = models.ForeignKey(

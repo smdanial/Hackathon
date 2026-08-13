@@ -39,29 +39,12 @@ export const BUS_ROUTES: BusRoute[] = [
       { lat: 23.811, lng: 90.33 }, // Baipail
       { lat: 23.825, lng: 90.312 }, // Nabinagar
       { lat: 23.841, lng: 90.293 }, // Savar Bazar
-      { lat: 23.858, lng: 90.267 }, // NITER (Savar)
+      { lat: 23.9157, lng: 90.2356 }, // NITER (Savar)
     ],
     driverName: "Rafiqul Islam",
     driverPhone: "01712-345678",
     supervisorName: "Saniyat Hosen Nirob",
     supervisorPhone: "01911-223344",
-  },
-  {
-    id: "gabtoli",
-    name: "Gabtoli to NITER",
-    waypoints: [
-      { lat: 23.7788, lng: 90.3486 }, // Gabtoli
-      { lat: 23.789, lng: 90.344 }, // Darus Salam
-      { lat: 23.801, lng: 90.338 }, // Amin Bazar
-      { lat: 23.814, lng: 90.326 }, // Baipail
-      { lat: 23.827, lng: 90.309 }, // Nabinagar
-      { lat: 23.841, lng: 90.293 }, // Savar Bazar
-      { lat: 23.858, lng: 90.267 }, // NITER (Savar)
-    ],
-    driverName: "Md. Shafiqul Alam",
-    driverPhone: "01818-556677",
-    supervisorName: "Makssedul Rafsan",
-    supervisorPhone: "01622-889900",
   },
   {
     id: "uttara",
@@ -73,7 +56,7 @@ export const BUS_ROUTES: BusRoute[] = [
       { lat: 23.858, lng: 90.32 }, // Dhaka–Ashulia road
       { lat: 23.856, lng: 90.3 }, // Ashulia
       { lat: 23.8575, lng: 90.285 }, // Baipail–Ashulia stretch
-      { lat: 23.858, lng: 90.267 }, // NITER (Savar)
+      { lat: 23.9157, lng: 90.2356 }, // NITER (Savar)
     ],
     driverName: "Abdul Karim",
     driverPhone: "01521-334455",

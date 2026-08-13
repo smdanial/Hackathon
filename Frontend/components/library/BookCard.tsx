@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Book, BookOpen, CalendarDays, Check, FileText, Pencil, Trash2 } from "lucide-react";
+import {
+  Book,
+  BookOpen,
+  CalendarDays,
+  Check,
+  FileText,
+  GraduationCap,
+  Pencil,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { SAMPLE_PDF_URL } from "./dummyData";
 import type { Book as BookData } from "./dummyData";
 
@@ -33,7 +43,7 @@ export default function BookCard({ book, onEdit, onDelete }: BookCardProps) {
     <article className="group flex flex-col overflow-hidden rounded-2xl glass shadow-card ring-1 ring-white/60 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift">
       {/* Cover */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-primary-light">
-        {coverFailed ? (
+        {!book.coverImageUrl || coverFailed ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-linear-to-br from-primary to-primary-dark p-4 text-center">
             <BookOpen className="h-10 w-10 text-white" />
             <span className="font-heading text-sm font-semibold leading-tight text-white">
@@ -51,11 +61,17 @@ export default function BookCard({ book, onEdit, onDelete }: BookCardProps) {
           />
         )}
 
-        {/* Format tag */}
+        {/* Format tag + department tag (CR uploads) */}
         <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur-sm">
           {isPdf ? <FileText className="h-3 w-3" /> : <Book className="h-3 w-3" />}
           {book.format}
         </span>
+        {book.department ? (
+          <span className="absolute left-2.5 top-11 inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+            <GraduationCap className="h-3 w-3" />
+            {book.department}
+          </span>
+        ) : null}
 
         {/* Librarian actions */}
         {onEdit || onDelete ? (
@@ -91,6 +107,18 @@ export default function BookCard({ book, onEdit, onDelete }: BookCardProps) {
             {book.title}
           </h3>
           <p className="mt-0.5 text-sm text-slate-600">{book.author}</p>
+          {book.department ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-primary-dark">
+              <GraduationCap className="h-3.5 w-3.5" />
+              {book.department} department upload
+            </p>
+          ) : null}
+          {book.addedByName ? (
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <UserRound className="h-3.5 w-3.5" />
+              Uploaded by {book.addedByName}
+            </p>
+          ) : null}
         </div>
 
         {isAvailable ? (
