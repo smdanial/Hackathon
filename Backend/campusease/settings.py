@@ -21,12 +21,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l*j8+cfevw^o+$=4v819i#ky7j_-78w0a*y4-(i4%kqx3lf2=n'
+# The fallback below is for LOCAL DEVELOPMENT ONLY — production (Render) must
+# set SECRET_KEY in the environment; it is never hardcoded here.
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY', 'django-insecure-l*j8+cfevw^o+$=4v819i#ky7j_-78w0a*y4-(i4%kqx3lf2=n'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+# Comma-separated hostnames; set ALLOWED_HOSTS in production (e.g. the
+# Render service URL) so the app accepts requests from the real host.
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -53,6 +59,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise serves static files in production (and gzip/brotli-compresses
+    # them) — must come right after SecurityMiddleware.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,14 +76,21 @@ ROOT_URLCONF = 'campusease.urls'
 # Custom user model: students log in with email or student ID.
 AUTH_USER_MODEL = 'accounts.Student'
 
+# Base URL of the web app — used for CORS in production and for emailed
+# reset links. Point FRONTEND_URL at the deployed Vercel URL in production.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
 # CORS: in development, allow the Next.js dev server to call this API from
 # any local origin (Next may pick a non-default port if 3000 is busy).
+# In production, allow the origins in CORS_ALLOWED_ORIGINS (comma-separated),
+# defaulting to FRONTEND_URL so the real Vercel URL works without a code change.
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOWED_ORIGINS = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
+        origin.strip()
+        for origin in os.environ.get('CORS_ALLOWED_ORIGINS', FRONTEND_URL).split(',')
+        if origin.strip()
     ]
 
 # Django REST Framework
@@ -154,6 +170,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Serve static files with WhiteNoise's compressed manifest storage so
+# hashed filenames and gzip/brotli compression work in production.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # Uploaded media (profile pictures)
 MEDIA_URL = 'media/'
@@ -170,8 +198,7 @@ RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get(
     'RESEND_FROM_EMAIL', 'CampusEase <onboarding@resend.dev>'
 )
-# Base URL of the web app, used in emailed reset links.
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+# FRONTEND_URL (used in emailed reset links) is defined above with the CORS settings.
 
 # Dev logging: print INFO+ from our apps and Django to the console, so
 # email sends (and their failures) are visible in `docker logs backend`.

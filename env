@@ -1,0 +1,7 @@
+# Resend API key for transactional email (password reset links).
+RESEND_API_KEY=re_VBZW6T66_Kn9N4GUH3MyM4WX5p9PZk4a6
+# A verified sender address on your Resend account. The default test sender
+# (onboarding@resend.dev) only delivers to the account owner's email.
+RESEND_FROM_EMAIL=CampusEase <onboarding@resend.dev>
+# Base URL of the web app, used inside emailed reset links.
+FRONTEND_URL=http://localhost:3000
