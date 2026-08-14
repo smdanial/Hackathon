@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/notices/', include('notices.urls')),
     path('api/library/', include('library.urls')),
     path('api/bus/', include('bus_tracking.urls')),
+    path('api/lab-reports/', include('labreports.urls')),
 ]
 
 # Serve uploaded media (profile pictures) in development.

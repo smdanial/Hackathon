@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   CircleUserRound,
   DoorOpen,
+  FileText,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -42,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Bus Tracker", href: "/bus", icon: Bus },
   { label: "Lost & Found", href: "/lost-found", icon: PackageSearch },
   { label: "Notices", href: "/notices", icon: Bell },
+  { label: "Lab Report", href: "/lab-report", icon: FileText },
   { label: "My Profile", href: "/profile", icon: CircleUserRound },
 ];
 
@@ -87,7 +89,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Drivers are restricted to the Driver Console: it is the only nav entry
   // they see, and any other page bounces back to it.
   const isDriver = student?.role === "driver";
-  const navItems = isDriver ? [DRIVER_ITEM] : NAV_ITEMS;
+  // Librarians don't get the Lab Report page (drivers get their own console).
+  const navItems = isDriver
+    ? [DRIVER_ITEM]
+    : NAV_ITEMS.filter(
+        (item) => item.href !== "/lab-report" || !student?.is_librarian
+      );
   const topbarLinks = navItems.filter((item) => item.href !== "/profile");
 
   useEffect(() => {
@@ -284,7 +291,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 Campus Ease
               </span>
               <span className="block text-[10px] tracking-wide text-zinc-500">
-                Niter University
+                NITER.
               </span>
             </span>
           </Link>
