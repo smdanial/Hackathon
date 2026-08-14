@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   CalendarCheck,
@@ -221,7 +222,10 @@ export default function BookingModal({ room, onClose, onChanged }: BookingModalP
     }
   };
 
-  return (
+  // Rendered through a portal to <body> so the backdrop covers the whole
+  // viewport — including the app shell's navbar — instead of being contained
+  // by the page's stacking context.
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       role="dialog"
@@ -534,6 +538,7 @@ export default function BookingModal({ room, onClose, onChanged }: BookingModalP
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

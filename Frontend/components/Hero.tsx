@@ -160,7 +160,7 @@ export default function Hero() {
               Campus Ease
             </span>
             <span className="block text-[10px] tracking-wide text-zinc-500">
-              Niter University
+              National Institute of Textile Engineering and Research
             </span>
           </span>
         </Link>
@@ -221,7 +221,7 @@ export default function Hero() {
               <p className="mt-6 max-w-md text-base leading-relaxed text-zinc-400 sm:text-lg">
                 Book free rooms, follow campus buses, recover lost items and
                 stay on top of every notice — all in one place, built for
-                Niter University.
+                National Institute of Textile Engineering and Research.
               </p>
             </FadeUp>
 

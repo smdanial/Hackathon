@@ -15,6 +15,14 @@ export interface Notice {
   postedByName: string | null;
   /** Department of Class/Lab notices (empty for campus-wide club/EMS). */
   department: string;
+  /** Club notices can carry an image (absolute URL) and a safe link. */
+  imageUrl?: string | null;
+  linkUrl?: string;
+  linkLabel?: string;
+  /** Class/Lab notices can carry one attached file (absolute URL). */
+  fileUrl?: string | null;
+  /** Original filename of the attached file, for display. */
+  fileName?: string;
 }
 
 /** Full display labels for each notice segment. */
