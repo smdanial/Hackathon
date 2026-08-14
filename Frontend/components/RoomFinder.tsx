@@ -13,9 +13,16 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import RoomModal from "@/components/RoomModal";
-import { getRoomLabel } from "@/lib/mockRooms";
+import { getClassLabel, getRoomLabel } from "@/lib/mockRooms";
 import type { Room } from "@/lib/mockRooms";
-import { formatTime, getRoomStatus, toISODate } from "@/lib/getRoomStatus";
+import {
+  formatTime,
+  getRoomStatus,
+  isAcademicDay,
+  toISODate,
+  weekdayKey,
+  withinAcademicDay,
+} from "@/lib/getRoomStatus";
 import type { RoomStatus } from "@/lib/getRoomStatus";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 
@@ -27,10 +34,14 @@ const ALL = "all";
 /** Room shape as served by the Django API (snake_case). */
 interface ApiScheduleEntry {
   id: number;
-  /** Null = repeats every day (seeded schedule); set = one day only (booking). */
+  /** Recurring weekday ("mon"…"sat") or null = every day (legacy seed). */
+  day: string | null;
+  /** Null = recurring weekly slot; set = one day only (booking). */
   date: string | null;
   start_time: string;
   end_time: string;
+  course_code: string;
+  section: string;
   class_name: string;
   teacher_name: string;
 }
@@ -46,12 +57,17 @@ interface ApiRoom {
 
 /** Maps an API room to the frontend Room shape used by the status helpers.
  *
- * Only today's entries make it into the grid: recurring entries (date null)
- * plus bookings for today. A booking for another day must not mark the room
- * occupied (or "free until…") today.
+ * Only today's entries make it into the grid: a one-day booking only when it
+ * is for today, and a recurring slot only on an academic day whose weekday
+ * matches today (or it has no weekday — the legacy every-day seed). Friday
+ * and Saturday have no classes anywhere, and nothing runs outside the
+ * 08:00–16:00 academic day — so every room reads free on weekends and in
+ * the evening. Everything else must not mark the room occupied (or
+ * "free until…") today.
  */
 function toRoom(api: ApiRoom): Room {
   const today = toISODate(new Date());
+  const todayDay = weekdayKey();
   return {
     id: String(api.id),
     building: api.building,
@@ -59,12 +75,20 @@ function toRoom(api: ApiRoom): Room {
     roomNumber: api.room_number,
     capacity: api.capacity,
     schedule: api.schedule
-      .filter((s) => s.date === null || s.date === today)
+      .filter(
+        (s) =>
+          withinAcademicDay(s.start_time, s.end_time) &&
+          (s.date !== null
+            ? s.date === today
+            : isAcademicDay() && (s.day === null || s.day === todayDay))
+      )
       .map((s) => ({
         startTime: s.start_time,
         endTime: s.end_time,
         className: s.class_name,
         teacherName: s.teacher_name,
+        courseCode: s.course_code || undefined,
+        section: s.section || undefined,
       })),
   };
 }
@@ -175,7 +199,7 @@ function RoomCard({ room, status, onSelect }: RoomCardProps) {
           </>
         ) : (
           <>
-            <span className="font-semibold">{status.activeSlot.className}</span> ·{" "}
+            <span className="font-semibold">{getClassLabel(status.activeSlot)}</span> ·{" "}
             {status.activeSlot.teacherName} until{" "}
             <span className="font-semibold">{formatTime(status.activeSlot.endTime)}</span>
           </>

@@ -15,7 +15,14 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Room } from "@/lib/mockRooms";
-import { getRoomStatus, timeToMinutes, toISODate } from "@/lib/getRoomStatus";
+import {
+  getRoomStatus,
+  isAcademicDay,
+  timeToMinutes,
+  toISODate,
+  weekdayKey,
+  withinAcademicDay,
+} from "@/lib/getRoomStatus";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders } from "@/lib/auth";
 import { useSession } from "@/lib/useSession";
@@ -24,7 +31,9 @@ import RequireAuth from "@/components/RequireAuth";
 /** Room shape as served by the Django API (snake_case). */
 interface ApiScheduleEntry {
   id: number;
-  /** Null = repeats every day (seeded schedule); set = one day only (booking). */
+  /** Recurring weekday ("mon"…"sat") or null = every day (legacy seed). */
+  day: string | null;
+  /** Null = recurring weekly slot; set = one day only (booking). */
   date: string | null;
   start_time: string;
   end_time: string;
@@ -43,6 +52,7 @@ interface ApiRoom {
 
 function toRoom(api: ApiRoom): Room {
   const today = toISODate(new Date());
+  const todayDay = weekdayKey();
   return {
     id: String(api.id),
     building: api.building,
@@ -50,7 +60,13 @@ function toRoom(api: ApiRoom): Room {
     roomNumber: api.room_number,
     capacity: api.capacity,
     schedule: api.schedule
-      .filter((s) => s.date === null || s.date === today)
+      .filter(
+        (s) =>
+          withinAcademicDay(s.start_time, s.end_time) &&
+          (s.date !== null
+            ? s.date === today
+            : isAcademicDay() && (s.day === null || s.day === todayDay))
+      )
       .map((s) => ({
         startTime: s.start_time,
         endTime: s.end_time,
@@ -70,7 +86,7 @@ interface ApiFoundItem {
   category: string;
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => 8 + i); // 08:00 – 21:00
+const HOURS = Array.from({ length: 8 }, (_, i) => 8 + i); // 08:00 – 15:00 (academic day)
 
 /** True when a room has no class covering the given hour (h*60..h*60+60). */
 function roomFreeAt(room: Room, hour: number): boolean {

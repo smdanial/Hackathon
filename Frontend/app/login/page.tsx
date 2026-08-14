@@ -32,9 +32,15 @@ export default function LoginPage() {
         body: JSON.stringify({ identifier, password }),
       });
       setSession(data.student, data.token, remember);
-      // Drivers land on their sharing dashboard; everyone else on the
-      // student dashboard.
-      router.push(data.student.role === "driver" ? "/bus/driver" : "/dashboard");
+      // Drivers land on their sharing console and librarians on the library;
+      // everyone else on the student dashboard.
+      router.push(
+        data.student.role === "driver"
+          ? "/bus/driver"
+          : data.student.is_librarian
+            ? "/library"
+            : "/dashboard"
+      );
       router.refresh();
     } catch (err) {
       setError(

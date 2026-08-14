@@ -86,22 +86,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // panel show up here (nav, header, driver redirect) in near real time.
   useSessionSync();
 
-  // Drivers are restricted to the Driver Console: it is the only nav entry
-  // they see, and any other page bounces back to it.
+  // Drivers are restricted to the Driver Console, librarians to the Library:
+  // those are the only pages they see — plus My Profile, which every role
+  // can open. Any other page bounces back to their home.
   const isDriver = student?.role === "driver";
-  // Librarians don't get the Lab Report page (drivers get their own console).
+  const isLibrarian = !!student?.is_librarian;
+  const libraryItem = NAV_ITEMS.find((item) => item.href === "/library")!;
+  const profileItem = NAV_ITEMS.find((item) => item.href === "/profile")!;
   const navItems = isDriver
-    ? [DRIVER_ITEM]
-    : NAV_ITEMS.filter(
-        (item) => item.href !== "/lab-report" || !student?.is_librarian
-      );
+    ? [DRIVER_ITEM, profileItem]
+    : isLibrarian
+      ? [libraryItem, profileItem]
+      : NAV_ITEMS;
   const topbarLinks = navItems.filter((item) => item.href !== "/profile");
 
   useEffect(() => {
-    if (isDriver && pathname !== "/bus/driver") {
-      router.replace("/bus/driver");
+    const home = isDriver ? "/bus/driver" : isLibrarian ? "/library" : null;
+    if (home && pathname !== home && pathname !== "/profile") {
+      router.replace(home);
     }
-  }, [isDriver, pathname, router]);
+  }, [isDriver, isLibrarian, pathname, router]);
 
   // Close the mobile menu whenever the route changes (React's documented
   // pattern for adjusting state during render).
@@ -195,7 +199,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="border-t border-white/10 p-3">
         {student ? (
           <Link
-            href={isDriver ? "/bus/driver" : "/profile"}
+            href="/profile"
             onClick={() => setMobileOpen(false)}
             className="flex items-center gap-3 rounded-xl p-2 transition-colors duration-200 hover:bg-white/10"
           >
@@ -278,9 +282,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </button>
 
           {/* Brand — the app home is the dashboard (or the driver console
-              for drivers, who have no other page). */}
+              for drivers / the library for librarians, who have no other
+              page). */}
           <Link
-            href={isDriver ? "/bus/driver" : "/dashboard"}
+            href={isDriver ? "/bus/driver" : isLibrarian ? "/library" : "/dashboard"}
             className="flex items-center gap-2.5"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
@@ -320,7 +325,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {/* Profile chip */}
           <div className="ml-auto">
             <Link
-              href={isDriver ? "/bus/driver" : "/profile"}
+              href="/profile"
               aria-current={pathname === "/profile" ? "page" : undefined}
               className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors duration-200 hover:bg-white/10"
             >
