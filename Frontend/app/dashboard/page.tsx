@@ -8,6 +8,7 @@ import {
   BookOpen,
   Bus,
   DoorOpen,
+  FileText,
   Loader2,
   PackageSearch,
   Users,
@@ -17,6 +18,7 @@ import type { Room } from "@/lib/mockRooms";
 import { getRoomStatus, timeToMinutes, toISODate } from "@/lib/getRoomStatus";
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders } from "@/lib/auth";
+import { useSession } from "@/lib/useSession";
 import RequireAuth from "@/components/RequireAuth";
 
 /** Room shape as served by the Django API (snake_case). */
@@ -155,6 +157,8 @@ function MiniBars({ data, color = "bg-zinc-900" }: { data: { label: string; valu
 }
 
 function Dashboard() {
+  // Who's signed in — hides the Lab Report link for Librarians.
+  const { student } = useSession();
   const [now, setNow] = useState(() => new Date());
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -310,6 +314,15 @@ function Dashboard() {
             <PackageSearch className="h-4 w-4" />
             Report Found Item
           </Link>
+          {!student?.is_librarian ? (
+            <Link
+              href="/lab-report"
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-all duration-200 hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.98]"
+            >
+              <FileText className="h-4 w-4" />
+              Lab Report Cover
+            </Link>
+          ) : null}
         </div>
       </header>
 

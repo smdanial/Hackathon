@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'notices',
     'library',
     'bus_tracking',
+    'labreports',
 ]
 
 MIDDLEWARE = [
@@ -71,6 +72,8 @@ AUTH_USER_MODEL = 'accounts.Student'
 # any local origin (Next may pick a non-default port if 3000 is busy).
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
+    # Let the browser read the download filename from the PDF endpoint.
+    CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 else:
     CORS_ALLOWED_ORIGINS = [
         'http://localhost:3000',
