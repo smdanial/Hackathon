@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarCheck, DoorOpen, Layers, Users, X } from "lucide-react";
 import type { Room } from "@/lib/mockRooms";
-import { getRoomLabel } from "@/lib/mockRooms";
+import { getClassLabel, getRoomLabel } from "@/lib/mockRooms";
 import { buildDayTimeline, formatTime, getRoomStatus } from "@/lib/getRoomStatus";
 import BookingModal from "@/components/BookingModal";
 
@@ -62,18 +62,21 @@ export default function RoomModal({
   // by the page's stacking context.
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={`${getRoomLabel(room.roomNumber)} — ${room.building}`}
     >
       {/* Backdrop — clicking it closes the modal */}
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
+      {/* Centers the card when it fits, scrolls when it is taller than the
+          screen — the popup always stays fully visible and reachable. */}
+      <div className="relative flex min-h-full items-center justify-center p-4">
       <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -137,7 +140,7 @@ export default function RoomModal({
                 {slot.entry ? (
                   <p className="mt-1 text-sm text-slate-700">
                     <span className="font-semibold text-ink">
-                      {slot.entry.className}
+                      {getClassLabel(slot.entry)}
                     </span>{" "}
                     · {slot.entry.teacherName}
                   </p>
@@ -165,7 +168,7 @@ export default function RoomModal({
                 ? status.nextSlot
                   ? `Free until ${formatTime(status.nextSlot.startTime)}`
                   : "Free all day"
-                : `${status.activeSlot.className} until ${formatTime(status.activeSlot.endTime)}`}
+                : `${getClassLabel(status.activeSlot)} until ${formatTime(status.activeSlot.endTime)}`}
             </span>
             Schedule updates automatically.
           </p>
@@ -182,6 +185,7 @@ export default function RoomModal({
         </div>
       </div>
 
+      </div>
       {/* Booking popup — layered above this modal */}
       {bookingOpen ? (
         <BookingModal

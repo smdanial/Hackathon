@@ -64,18 +64,18 @@ Authenticated requests send `Authorization: Token <token>`.
 The dev database ships with a test student matching the frontend's mock
 profile:
 
-- Email: `arif@student.edu` — Student ID: `NIT-2101004`
+- Email: `arif@student.edu` — Student ID: `CS 2607005`
 - Password: `hackathon123`
 - Role: **CR** (`is_cr = True`) — the demo CR, so room booking and notice
   posting work out of the box. Grant/revoke the role from the Django admin
   (Students list → CR column, or the Role section of a student's change page).
 - Department: `CSE` — the demo CR's class/lab notices are seeded to CSE.
-  `nusrat@student.edu` (`hackathon123`) is the demo **Librarian**
+  `librarian@test.edu` (`hackathon123`) is the demo **Librarian**
   (`is_librarian = True`) and an **EEE** regular student, handy for testing
   department scoping: she sees only campus-wide (club/EMS) notices, never
   CSE class/lab ones, but she *can* add/upload/update library books while
   arif (CR, not librarian) cannot.
-- `paulakash187@gmail.com` (`hackathon123`) is the demo **Club Member**
+- `nusrat@student.edu` (`hackathon123`) is the demo **Club Member**
   (`is_club_member = True`) — he can post and update Club notices with
   images and safe links. arif (CR) cannot touch club notices, and paulakash
   cannot touch class/lab ones.

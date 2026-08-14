@@ -73,18 +73,21 @@ export default function NoticeModal({
   // by the page's stacking context.
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={NOTICE_CATEGORY_LABELS[category]}
     >
       {/* Backdrop — clicking it closes the modal */}
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
+      {/* Centers the card when it fits, scrolls when it is taller than the
+          screen — the popup always stays fully visible and reachable. */}
+      <div className="relative flex min-h-full items-center justify-center p-4">
       <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex items-center gap-3">
@@ -167,6 +170,7 @@ export default function NoticeModal({
             ))
           )}
         </div>
+      </div>
       </div>
     </div>,
     document.body

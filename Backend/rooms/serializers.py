@@ -13,9 +13,12 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
         model = ScheduleEntry
         fields = [
             "id",
+            "day",
             "date",
             "start_time",
             "end_time",
+            "course_code",
+            "section",
             "class_name",
             "teacher_name",
         ]
@@ -104,6 +107,18 @@ class RoomBookingSerializer(serializers.ModelSerializer):
         if start and end and start >= end:
             raise serializers.ValidationError(
                 {"end_time": "End time must be after the start time."}
+            )
+
+        # Classes only run inside the academic day (08:00–16:00). A booking
+        # outside that window would be invisible in the Room Finder, so reject
+        # it here rather than let a CR book an unseen evening class.
+        if start and end and (start < "08:00" or end > "16:00"):
+            raise serializers.ValidationError(
+                {
+                    "start_time": (
+                        "Classes run between 08:00 AM and 04:00 PM only."
+                    )
+                }
             )
 
         # The class (date + end time) must be in the future. Students pick

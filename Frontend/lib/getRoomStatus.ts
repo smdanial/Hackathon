@@ -36,6 +36,29 @@ export function toISODate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Day-of-week keys in the same order as Date#getDay() (Sunday first). */
+export const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+/** "mon" for a Date, in the browser's local timezone (Sunday = "sun"). */
+export function weekdayKey(date: Date = new Date()): string {
+  return WEEKDAY_KEYS[date.getDay()];
+}
+
+/** True on an academic day — classes never run on Friday or Saturday. */
+export function isAcademicDay(date: Date = new Date()): boolean {
+  const key = weekdayKey(date);
+  return key !== "fri" && key !== "sat";
+}
+
+/** The campus academic day: classes run from 08:00 to 16:00 only. */
+export const ACADEMIC_DAY_START = "08:00";
+export const ACADEMIC_DAY_END = "16:00";
+
+/** True when a slot fits entirely inside the 08:00–16:00 academic day. */
+export function withinAcademicDay(startTime: string, endTime: string): boolean {
+  return startTime >= ACADEMIC_DAY_START && endTime <= ACADEMIC_DAY_END;
+}
+
 /** "09:00" → 540 (minutes since midnight). */
 export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
@@ -94,8 +117,8 @@ export function getRoomStatus(room: Room, now: Date = new Date()): RoomStatus {
 export function buildDayTimeline(
   room: Room,
   now: Date = new Date(),
-  dayStart: string = "08:00",
-  dayEnd: string = "18:00"
+  dayStart: string = ACADEMIC_DAY_START,
+  dayEnd: string = ACADEMIC_DAY_END
 ): DaySlot[] {
   const nowMinutes = toDayMinutes(now);
   const startMinutes = timeToMinutes(dayStart);

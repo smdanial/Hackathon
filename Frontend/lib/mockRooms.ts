@@ -14,9 +14,13 @@ export interface ScheduleEntry {
   startTime: string;
   /** 24-hour end time, e.g. "10:30". */
   endTime: string;
-  /** Section name for the class booking this slot, e.g. "CSE-3A". */
+  /** Class title for this slot, e.g. "Chemistry". */
   className: string;
   teacherName: string;
+  /** Course code, e.g. "CHE-1104" (absent in the legacy mock data). */
+  courseCode?: string;
+  /** Class section, e.g. "A1"/"A2" for lab subgroups (absent for lectures). */
+  section?: string;
 }
 
 export interface Room {
@@ -287,4 +291,13 @@ export const ROOMS: Room[] = [
 /** "301" → "Room 301"; named rooms like "IT Lab 2" keep their name as-is. */
 export function getRoomLabel(roomNumber: string): string {
   return /^\d+$/.test(roomNumber) ? `Room ${roomNumber}` : roomNumber;
+}
+
+/** "CHE-1104 Chemistry (A1)" — code + title, plus the section when set. */
+export function getClassLabel(
+  entry: Pick<ScheduleEntry, "courseCode" | "className" | "section">
+): string {
+  const code = entry.courseCode ? `${entry.courseCode} ` : "";
+  const section = entry.section ? ` (${entry.section})` : "";
+  return `${code}${entry.className}${section}`;
 }

@@ -21,12 +21,23 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import {
+  isAcademicDay,
+  toISODate,
+  weekdayKey,
+  withinAcademicDay,
+} from "@/lib/getRoomStatus";
 
 /** Room shape as served by the Django API (only the fields we need). */
 interface ApiRoom {
   id: number;
   building: string;
-  schedule: { start_time: string }[];
+  schedule: {
+    start_time: string;
+    end_time: string;
+    day: string | null;
+    date: string | null;
+  }[];
 }
 
 interface Feature {
@@ -114,10 +125,26 @@ export default function Hero() {
     apiRequest<ApiRoom[]>("/rooms/")
       .then((data) => {
         if (cancelled) return;
+        // "Classes today" follows the same rules as the Room Finder: a slot
+        // counts only when it happens today (or repeats on today's weekday)
+        // and fits inside the 08:00–16:00 academic day. On weekends the
+        // count is zero, matching the all-free grid.
+        const today = toISODate(new Date());
+        const todayDay = weekdayKey();
+        const classesToday = data.reduce((sum, room) => {
+          const todaySlots = room.schedule.filter(
+            (s) =>
+              withinAcademicDay(s.start_time, s.end_time) &&
+              (s.date !== null
+                ? s.date === today
+                : isAcademicDay() && (s.day === null || s.day === todayDay))
+          );
+          return sum + todaySlots.length;
+        }, 0);
         setStats({
           rooms: data.length,
           buildings: new Set(data.map((room) => room.building)).size,
-          classes: data.reduce((sum, room) => sum + room.schedule.length, 0),
+          classes: classesToday,
         });
       })
       .catch(() => {

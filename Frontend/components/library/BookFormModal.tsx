@@ -180,18 +180,21 @@ export default function BookFormModal({
   // by the page's stacking context.
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={editing ? "Edit book" : "Add book"}
     >
       {/* Backdrop — clicking it closes the modal */}
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-md"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
+      {/* Centers the card when it fits, scrolls when it is taller than the
+          screen — the popup always stays fully visible and reachable. */}
+      <div className="relative flex min-h-full items-center justify-center p-4">
       <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl glass-strong shadow-lift ring-1 ring-white/60">
         <div className="flex items-center justify-between gap-3 border-b border-white/50 px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -435,6 +438,7 @@ export default function BookFormModal({
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>,
     document.body

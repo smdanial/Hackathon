@@ -32,14 +32,34 @@ class ScheduleEntry(models.Model):
     frontend's status derivation expects.
     """
 
+    # Weekday this recurring entry applies to ("mon", "tue", …). Null means
+    # the entry repeats every day — the legacy seeded schedule and student
+    # bookings (which pin a specific date instead).
+    DAY_CHOICES = [
+        ("sun", "Sunday"),
+        ("mon", "Monday"),
+        ("tue", "Tuesday"),
+        ("wed", "Wednesday"),
+        ("thu", "Thursday"),
+        ("fri", "Friday"),
+        ("sat", "Saturday"),
+    ]
+    day = models.CharField(
+        max_length=3, choices=DAY_CHOICES, null=True, blank=True
+    )
     room = models.ForeignKey(
         Room, related_name="schedule", on_delete=models.CASCADE
     )
     # When set, this entry exists only on that date (created by a student
-    # booking). When null, the entry repeats every day (the seeded schedule).
+    # booking). When null, the entry repeats on its weekday (or every day
+    # when ``day`` is also null — the original seeded schedule).
     date = models.DateField(null=True, blank=True)
     start_time = models.CharField(max_length=5)
     end_time = models.CharField(max_length=5)
+    # The course code (e.g. "CHE-1104") and, when the class has subgroups,
+    # the section (e.g. "A1"/"A2"). Student bookings leave both blank.
+    course_code = models.CharField(max_length=20, blank=True, default="")
+    section = models.CharField(max_length=10, blank=True, default="")
     class_name = models.CharField(max_length=100)
     teacher_name = models.CharField(max_length=100)
     # Present when this entry was created by a student room booking. Deleting
