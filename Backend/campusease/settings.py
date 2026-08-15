@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'notices',
     'library',
     'bus_tracking',
+    'labreports',
 ]
 
 MIDDLEWARE = [

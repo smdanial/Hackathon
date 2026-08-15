@@ -5,3 +5,5 @@ django-cors-headers>=4.4
 resend>=2.0
 whitenoise>=6.6
 gunicorn>=21.2
+reportlab>=4.0
+pypdf>=4.0
