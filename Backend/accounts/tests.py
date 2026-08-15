@@ -6,6 +6,21 @@ from rest_framework.test import APIClient
 from .models import RoleCredential
 
 
+class UserManagerTests(TestCase):
+    def test_create_superuser_uses_email_without_username(self):
+        user = get_user_model().objects.create_superuser(
+            email="admin@student.edu",
+            password="StrongPass123!",
+            full_name="Admin User",
+            student_id="ADMIN-001",
+        )
+
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertEqual(user.email, "admin@student.edu")
+        self.assertEqual(user.student_id, "ADMIN-001")
+
+
 def _student(email, full_name, student_id, department, **flags):
     Student = get_user_model()
     student = Student(

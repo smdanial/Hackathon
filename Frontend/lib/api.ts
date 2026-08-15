@@ -2,7 +2,7 @@
 // dev server (port 8000) and can be overridden with NEXT_PUBLIC_API_URL.
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+  process.env.NEXT_PUBLIC_API_URL ?? "https://smdanial.pythonanywhere.com/api/";
 
 /** DRF-style error body: field name -> list of messages (or a bare string). */
 export type ApiErrorBody = Record<string, string[] | string>;
