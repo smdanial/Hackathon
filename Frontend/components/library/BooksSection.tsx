@@ -15,6 +15,7 @@ import {
 import { apiRequest, ApiError, firstErrorMessage } from "@/lib/api";
 import { authHeaders, type Student } from "@/lib/auth";
 import { useSession } from "@/lib/useSession";
+import { DEPARTMENTS } from "@/lib/departments";
 import { PAGE_SIZE } from "./dummyData";
 import type { Book } from "./dummyData";
 import BookCard from "./BookCard";
@@ -52,14 +53,16 @@ export default function BooksSection() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [format, setFormat] = useState<FormatFilter>("all");
+  const [deptFilter, setDeptFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState<ModalState | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Fetch the signed-in student's role + department first (the stored
   // session can be stale right after an admin grants a role), then load the
-  // catalogue scoped to their department: Librarians see the full catalogue;
-  // students see campus-wide books + their own department's CR uploads.
+  // full catalogue (no department filter — every student sees all books
+  // by default). A separate effect re-fetches when the department filter
+  // dropdown changes.
   useEffect(() => {
     let cancelled = false;
     apiRequest<Student>("/auth/me/", { headers: authHeaders() })
@@ -69,10 +72,8 @@ export default function BooksSection() {
         setIsCr(me.is_cr === true);
         const dept = me.department?.trim() ?? "";
         setDepartment(dept || null);
-        const url = me.is_librarian
-          ? "/library/"
-          : `/library/?department=${encodeURIComponent(dept)}`;
-        return apiRequest<ApiBook[]>(url, { headers: authHeaders() });
+        // Always fetch the full catalogue on initial load — no dept filter.
+        return apiRequest<ApiBook[]>("/library/", { headers: authHeaders() });
       })
       .then((data) => {
         if (cancelled || !data) return;
@@ -94,6 +95,37 @@ export default function BooksSection() {
       cancelled = true;
     };
   }, [sessionVersion]);
+
+  // Re-fetch books when the department filter dropdown changes (but not on
+  // the initial empty-string mount, which is already handled above).
+  useEffect(() => {
+    if (loading) return; // skip the first render — handled by the effect above
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    const url = deptFilter
+      ? `/library/?department=${encodeURIComponent(deptFilter)}`
+      : "/library/";
+    apiRequest<ApiBook[]>(url, { headers: authHeaders() })
+      .then((data) => {
+        if (cancelled) return;
+        setBooks(data.map(toBook));
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setLoadError(
+          err instanceof ApiError
+            ? firstErrorMessage(err.body)
+            : "Could not load the library catalogue. Is the backend running?"
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deptFilter]);
 
   const normalized = query.trim().toLowerCase();
 
@@ -182,6 +214,23 @@ export default function BooksSection() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Department filter dropdown — defaults to "All Departments" */}
+          <select
+            value={deptFilter}
+            onChange={(e) => {
+              setDeptFilter(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">All Departments</option>
+            {DEPARTMENTS.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
+          </select>
+
           {FORMAT_FILTERS.map(({ value, label }) => (
             <button
               key={value}
